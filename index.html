@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OneBlade ERP</title>
+  <style>
+    body { margin: 0; padding: 0; background: hsl(220, 20%, 97%); }
+    #root { min-height: 100vh; }
+    #loading {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; font-family: system-ui, sans-serif;
+      font-size: 14px; color: #888;
+    }
+  </style>
+
+  <!-- React 18 -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel (compiles JSX in-browser) -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
+</head>
+<body>
+
+  <div id="loading">Loading OneBlade ERP…</div>
+  <div id="root"></div>
+
+  <!-- Load the app -->
+  <script type="text/babel" data-type="module" src="./OB-ERP.jsx"></script>
+
+  <!-- Mount after Babel finishes compiling -->
+  <script type="text/babel">
+    document.getElementById('loading').style.display = 'none';
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(App));
+  </script>
+
+</body>
+</html>

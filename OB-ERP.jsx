@@ -189,6 +189,7 @@ function DataProvider({ children }) {
   const [accounts, setAccounts]          = useState(saved?.accounts           || initialAccounts);
   const [journal, setJournal]            = useState(saved?.journal            || initialJournal);
   const [activityLog, setActivityLog]    = useState(saved?.activityLog        || []);
+  const [bills, setBills]                = useState(saved?.bills                || []);
 
   // Seed the ID counter from whatever is in storage
   useEffect(() => {
@@ -197,8 +198,8 @@ function DataProvider({ children }) {
 
   // Persist on every change
   useEffect(() => {
-    saveStore({ suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders, accounts, journal, activityLog });
-  }, [suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders, accounts, journal, activityLog]);
+    saveStore({ suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders, accounts, journal, activityLog, bills });
+  }, [suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders, accounts, journal, activityLog, bills]);
 
   // ── Journal engine ──────────────────────────────────────────────────────────
   const postEntry = useCallback((entry) => {
@@ -288,6 +289,9 @@ function DataProvider({ children }) {
   const addFinishedGood     = useCallback(fg => setFGs(p       => [...p, { ...fg, id: nid('fg')   }]), []);
   const addPurchaseOrder    = useCallback(po => setPOs(p       => [...p, { ...po, id: nid('po')   }]), []);
   const addFinishedGoodOrder = useCallback(fgo => setFGOs(p   => [...p, { ...fgo, id: nid('fgo')  }]), []);
+  const addBill             = useCallback(bill => setBills(p  => [...p, { ...bill, id: nid('bill') }]), []);
+  const updateBill          = useCallback((billId, updates) => setBills(p => p.map(b => b.id === billId ? { ...b, ...updates } : b)), []);
+  const deleteBill          = useCallback((billId) => setBills(p => p.filter(b => b.id !== billId)), []);
   const deleteFinishedGoodOrder = useCallback(fgoId => setFGOs(p => p.filter(o => o.id !== fgoId)), []);
 
   const updatePurchaseOrder = useCallback((poId, updates) => {
@@ -361,6 +365,7 @@ function DataProvider({ children }) {
     <DataContext.Provider value={{
       suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders,
       addSupplier, addPart, addFinishedGood, addPurchaseOrder, addFinishedGoodOrder, deleteFinishedGoodOrder, updatePurchaseOrder,
+      bills, addBill, updateBill, deleteBill,
       updateBOM, updatePart, deletePart, updateSupplier, deleteSupplier, updateFinishedGood, deleteFinishedGood, updateFinishedGoodOrder, getPartById, getSupplierById,
       addInventoryRecord, updateInventoryRecord, deleteInventoryRecord,
       accounts, journal, addAccount, postEntry, reverseEntry, postSalesSummary,
@@ -389,7 +394,7 @@ const css = `
 `;
 
 // Status badge colors
-const orderStatusCls  = { draft:'badge-muted', submitted:'badge-primary' };
+const orderStatusCls  = { draft:'badge-muted', 'pending-approval':'badge-yellow', approved:'badge-green', submitted:'badge-primary' };
 const paymentCls      = { unpaid:'badge-red', 'deposit-paid':'badge-yellow', paid:'badge-green' };
 const shippingCls     = { unshipped:'badge-muted', shipped:'badge-yellow', delivered:'badge-green' };
 const fgStatusCls     = { 'on-order':'badge-yellow', 'in-production':'badge-primary', shipped:'badge-green', received:'badge-green', sold:'badge-muted' };
@@ -856,7 +861,9 @@ function CreatePODialog() {
             <Field label="Order Status">
               <Select value={orderStatus} onChange={setOrderStatus}>
                 <option value="draft">Draft</option>
-                <option value="submitted">Submitted</option>
+                <option value="pending-approval">Pending Approval</option>
+                <option value="approved">Approved</option>
+                <option value="submitted">Submitted to Supplier</option>
               </Select>
             </Field>
             <Field label="Payment Status">
@@ -932,9 +939,25 @@ function CreatePODialog() {
 // ── PO Detail Modal ────────────────────────────────────────────────────────────
 // onBack: optional callback — when set, shows a back arrow instead of just closing
 function PODetail({ po, open, onClose, onBack }) {
-  const { getSupplierById, getPartById } = useData();
+  const { getSupplierById, getPartById, addBill, bills } = useData();
   if (!po) return null;
   const supplier = getSupplierById(po.supplierId);
+  const existingBill = bills.find(b => b.poId === po.id);
+
+  const handleCreateBill = () => {
+    const amountDue = po.paymentStatus === 'deposit-paid'
+      ? po.totalCost - (po.depositAmount || 0)
+      : po.paymentStatus === 'paid' ? 0 : po.totalCost;
+    if (amountDue <= 0) { toast.error('PO is already fully paid — no bill needed'); return; }
+    if (existingBill)   { toast.error('A bill already exists for this PO'); return; }
+    addBill({
+      poId: po.id, poNumber: po.poNumber, supplierId: po.supplierId,
+      amount: amountDue, amountPaid: 0,
+      status: 'open', dueDate: '', dateCreated: today(),
+      memo: `Bill from ${po.poNumber}`,
+    });
+    toast.success(`Bill created for ${po.poNumber} — ${fmt(amountDue)}`);
+  };
 
   // Clickable info tile
   const InfoTile = ({ label, value, href, mono }) => (
@@ -984,7 +1007,7 @@ function PODetail({ po, open, onClose, onBack }) {
 
         {/* Status badges */}
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
-          <Badge cls={orderStatusCls[po.orderStatus]}>{po.orderStatus==='submitted'?'Submitted to Supplier':'Draft'}</Badge>
+          <Badge cls={orderStatusCls[po.orderStatus]}>{{ draft:'Draft', 'pending-approval':'Pending Approval', approved:'Approved', submitted:'Submitted to Supplier' }[po.orderStatus] || po.orderStatus}</Badge>
           <Badge cls={paymentCls[po.paymentStatus]}>{{ unpaid:'Unpaid','deposit-paid':'Deposit Paid',paid:'Paid in Full' }[po.paymentStatus]}</Badge>
           <Badge cls={shippingCls[po.shippingStatus]}>{{ unshipped:'Unshipped',shipped:'Shipped',delivered:'Delivered' }[po.shippingStatus]}</Badge>
         </div>
@@ -1101,6 +1124,18 @@ function PODetail({ po, open, onClose, onBack }) {
             </div>
           </>
         )}
+
+        <Separator />
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>
+            {existingBill
+              ? <span style={{ color:'hsl(160,60%,35%)', fontWeight:500 }}>✓ Bill exists for this PO</span>
+              : 'No bill created yet'}
+          </div>
+          {!existingBill && (
+            <Btn variant="outline" size="sm" onClick={handleCreateBill}>Create Vendor Bill</Btn>
+          )}
+        </div>
       </div>
     </Modal>
   );
@@ -1802,7 +1837,7 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
                         value={po.orderStatus}
                         onChange={v => update(po.id, 'orderStatus', v)}
                         colorMap={orderStatusCls}
-                        options={[['draft','Draft'],['submitted','Submitted']]}
+                        options={[['draft','Draft'],['pending-approval','Pending Approval'],['approved','Approved'],['submitted','Submitted to Supplier']]}
                       />
                     </td>
                     <td style={{ padding:'8px 14px' }}>
@@ -3097,10 +3132,309 @@ function ActivityLogPage() {
   );
 }
 
+// ── Bills Page ────────────────────────────────────────────────────────────────
+function BillsPage() {
+  const { bills, updateBill, deleteBill, purchaseOrders, suppliers, getSupplierById } = useData();
+  const [selected, setSelected] = useState(null);
+  const [f, setF] = useState({});
+  const fld = k => ({ value: f[k]??'', onChange: e => setF(p=>({...p,[k]:e.target.value})) });
+
+  const openBill = (bill) => { setSelected(bill); setF({...bill}); };
+  const closeBill = () => { setSelected(null); setF({}); };
+
+  const save = () => {
+    updateBill(selected.id, { status: f.status, dueDate: f.dueDate, amountPaid: parseFloat(f.amountPaid)||0, memo: f.memo, invoiceUrl: f.invoiceUrl||undefined });
+    toast.success('Bill updated');
+    closeBill();
+  };
+
+  const handleDelete = () => {
+    if (!confirm('Delete this bill? This cannot be undone.')) return;
+    deleteBill(selected.id);
+    toast.success('Bill deleted');
+    closeBill();
+  };
+
+  const markPaid = (bill) => {
+    updateBill(bill.id, { status:'paid', amountPaid: bill.amount });
+    toast.success('Bill marked paid');
+  };
+
+  const billStatusCls = { open:'badge-yellow', partial:'badge-primary', paid:'badge-green', void:'badge-muted' };
+  const totalOpen = bills.filter(b => b.status !== 'paid' && b.status !== 'void').reduce((s,b) => s + (b.amount - (b.amountPaid||0)), 0);
+  const totalPaid = bills.filter(b => b.status === 'paid').reduce((s,b) => s + b.amount, 0);
+
+  const po = selected ? purchaseOrders.find(p => p.id === selected.poId) : null;
+  const supplier = selected ? getSupplierById(selected.supplierId) : null;
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+        <div>
+          <div style={{ fontSize:22, fontWeight:700 }}>Vendor Bills</div>
+          <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>Create bills manually from any PO · Click to edit and mark paid</div>
+        </div>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+        <StatCard title="Open / Unpaid" value={fmt(totalOpen)} icon={Icons.Dollar} variant="warning" />
+        <StatCard title="Paid" value={fmt(totalPaid)} icon={Icons.Dollar} variant="success" />
+        <StatCard title="Total Bills" value={`${bills.length}`} icon={Icons.Clipboard} />
+      </div>
+
+      <Card>
+        <CardContent style={{ padding:0 }}>
+          {bills.length === 0 ? (
+            <div style={{ padding:'60px 20px', textAlign:'center', color:'hsl(220,10%,56%)' }}>
+              <div style={{ fontSize:32, marginBottom:12 }}>🧾</div>
+              <div style={{ fontSize:15, fontWeight:600, marginBottom:6 }}>No bills yet</div>
+              <div style={{ fontSize:13 }}>Open any Purchase Order and click <strong>Create Vendor Bill</strong> at the bottom to generate a bill.</div>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr style={{ background:'hsl(220,15%,96%)' }}>
+                  <TH>Bill #</TH><TH>PO #</TH><TH>Supplier</TH><TH>Status</TH><TH right>Amount</TH><TH right>Paid</TH><TH right>Balance</TH><TH>Created</TH><TH>Due</TH><TH>Invoice</TH>
+                </tr>
+              </thead>
+              <tbody>
+                {[...bills].reverse().map((bill, i) => {
+                  const sup = getSupplierById(bill.supplierId);
+                  const balance = bill.amount - (bill.amountPaid||0);
+                  return (
+                    <tr key={bill.id} style={{ cursor:'pointer' }}
+                      onClick={() => openBill(bill)}
+                      onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,98%)'}
+                      onMouseLeave={e => e.currentTarget.style.background='white'}>
+                      <TD><span className="mono" style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)' }}>BILL-{String(bills.length - i).padStart(3,'0')}</span></TD>
+                      <TD><span className="mono" style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>{bill.poNumber}</span></TD>
+                      <TD>{sup?.shortName || '—'}</TD>
+                      <TD><Badge cls={billStatusCls[bill.status]||'badge-muted'}>{bill.status}</Badge></TD>
+                      <TD right mono bold>{fmt(bill.amount)}</TD>
+                      <TD right mono>{fmt(bill.amountPaid||0)}</TD>
+                      <TD right mono><span style={{ color: balance > 0 ? 'hsl(38,80%,35%)' : 'hsl(160,60%,35%)' }}>{fmt(balance)}</span></TD>
+                      <TD muted>{bill.dateCreated}</TD>
+                      <TD muted>{bill.dueDate || '—'}</TD>
+                      <TD>
+                        {bill.invoiceUrl
+                          ? <a href={bill.invoiceUrl} target="_blank" rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:600, textDecoration:'none' }}
+                              onMouseEnter={e => e.currentTarget.style.textDecoration='underline'}
+                              onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>
+                              📄 PDF
+                            </a>
+                          : <span style={{ fontSize:12, color:'hsl(220,15%,75%)' }}>—</span>}
+                      </TD>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
+                  <td colSpan={4} style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(bills.reduce((s,b)=>s+b.amount,0))}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(bills.reduce((s,b)=>s+(b.amountPaid||0),0))}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(38,80%,35%)' }}>{fmt(totalOpen)}</td>
+                  <td colSpan={2}/>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Bill detail modal */}
+      <Modal title="" open={!!selected} onClose={closeBill} wide
+        headerAction={<span className="mono" style={{ fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)' }}>{selected?.poNumber}</span>}>
+        {selected && (
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            {/* Summary strip */}
+            <div style={{ display:'flex', gap:16, background:'hsl(220,15%,97%)', borderRadius:8, padding:'12px 16px' }}>
+              <div>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Supplier</div>
+                <div style={{ fontSize:13, fontWeight:600 }}>{supplier?.name || '—'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Created</div>
+                <div style={{ fontSize:13 }}>{selected.dateCreated}</div>
+              </div>
+              <div style={{ marginLeft:'auto', textAlign:'right' }}>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Balance Due</div>
+                <div className="mono" style={{ fontSize:20, fontWeight:700, color:'hsl(38,80%,35%)' }}>{fmt(selected.amount - (selected.amountPaid||0))}</div>
+              </div>
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+              <Field label="Status">
+                <Select value={f.status||'open'} onChange={v => setF(p=>({...p,status:v}))}>
+                  <option value="open">Open</option>
+                  <option value="partial">Partial</option>
+                  <option value="paid">Paid</option>
+                  <option value="void">Void</option>
+                </Select>
+              </Field>
+              <Field label="Amount Paid ($)"><Input type="number" step="0.01" min="0" {...fld('amountPaid')} className="mono" /></Field>
+              <Field label="Due Date"><Input type="date" {...fld('dueDate')} /></Field>
+            </div>
+            <Field label="Memo"><Input {...fld('memo')} /></Field>
+
+            {/* Invoice attachment */}
+            <div style={{ borderTop:'1px solid hsl(220,15%,90%)', paddingTop:14 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'hsl(220,10%,56%)', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>Invoice Attachment</div>
+              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                <div style={{ flex:1 }}>
+                  <Input
+                    {...fld('invoiceUrl')}
+                    placeholder="Paste Google Drive link to supplier invoice PDF…"
+                  />
+                </div>
+                {f.invoiceUrl && (
+                  <a href={f.invoiceUrl} target="_blank" rel="noopener noreferrer"
+                    style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, fontWeight:600,
+                      color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)',
+                      borderRadius:6, padding:'7px 12px', textDecoration:'none', whiteSpace:'nowrap' }}
+                    onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,90%)'}
+                    onMouseLeave={e => e.currentTarget.style.background='hsl(220,70%,96%)'}>
+                    📄 Open PDF ↗
+                  </a>
+                )}
+              </div>
+              {!f.invoiceUrl && (
+                <div style={{ fontSize:11, color:'hsl(220,15%,65%)', marginTop:5 }}>
+                  Share the file in Google Drive → Copy link → paste above
+                </div>
+              )}
+            </div>
+
+            {po && (
+              <div style={{ background:'hsl(220,70%,97%)', border:'1px solid hsl(220,70%,88%)', borderRadius:8, padding:'10px 14px', fontSize:12 }}>
+                <span style={{ color:'hsl(220,10%,56%)' }}>Source PO: </span>
+                <span className="mono" style={{ color:'hsl(220,70%,45%)', fontWeight:700 }}>{po.poNumber}</span>
+                <span style={{ color:'hsl(220,10%,56%)', marginLeft:12 }}>Total: </span>
+                <span className="mono" style={{ fontWeight:600 }}>{fmt(po.totalCost)}</span>
+                {po.depositAmount > 0 && <><span style={{ color:'hsl(220,10%,56%)', marginLeft:12 }}>Deposit paid: </span><span className="mono">{fmt(po.depositAmount)}</span></>}
+              </div>
+            )}
+
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderTop:'1px solid hsl(220,15%,90%)', paddingTop:16 }}>
+              <button onClick={handleDelete} style={{ fontSize:12, color:'hsl(0,72%,51%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>Delete bill</button>
+              <div style={{ display:'flex', gap:8 }}>
+                <Btn variant="ghost" onClick={closeBill}>Cancel</Btn>
+                <Btn variant="outline" onClick={() => { setF(p=>({...p,status:'paid',amountPaid:selected.amount})); }}>Mark Paid</Btn>
+                <Btn onClick={save}>Save Changes</Btn>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+// ── Global Search ─────────────────────────────────────────────────────────────
+function GlobalSearch({ setPage, onResult }) {
+  const { suppliers, parts, purchaseOrders, finishedGoodOrders, finishedGoods, bills, getSupplierById } = useData();
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const inputRef = React.useRef(null);
+
+  const q = query.toLowerCase().trim();
+
+  const results = q.length < 2 ? [] : [
+    ...purchaseOrders.filter(po =>
+      po.poNumber.toLowerCase().includes(q) ||
+      (getSupplierById(po.supplierId)?.name||'').toLowerCase().includes(q)
+    ).map(po => ({ type:'PO', label: po.poNumber, sub: getSupplierById(po.supplierId)?.shortName, cls:'badge-primary', data: po })),
+
+    ...finishedGoodOrders.filter(o =>
+      o.orderNumber.toLowerCase().includes(q) || o.sku.toLowerCase().includes(q)
+    ).map(o => ({ type:'FGO', label: o.orderNumber, sub: o.sku, cls:'badge-green', data: o })),
+
+    ...suppliers.filter(s =>
+      s.name.toLowerCase().includes(q) || (s.shortName||'').toLowerCase().includes(q) || (s.city||'').toLowerCase().includes(q)
+    ).map(s => ({ type:'Supplier', label: s.name, sub: s.city, cls:'badge-muted', data: s, page:'suppliers' })),
+
+    ...parts.filter(p =>
+      p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
+    ).map(p => ({ type:'Part', label: p.name, sub: p.sku, cls:'badge-muted', data: p, page:'bom' })),
+
+    ...finishedGoods.filter(fg =>
+      fg.name.toLowerCase().includes(q) || fg.sku.toLowerCase().includes(q)
+    ).map(fg => ({ type:'SKU', label: fg.name, sub: fg.sku, cls:'badge-green', data: fg, page:'bom' })),
+
+    ...bills.filter(b =>
+      b.poNumber.toLowerCase().includes(q) || (getSupplierById(b.supplierId)?.name||'').toLowerCase().includes(q)
+    ).map(b => ({ type:'Bill', label: b.poNumber, sub: fmt(b.amount), cls:'badge-yellow', data: b, page:'bills' })),
+  ].slice(0, 12);
+
+  const handleSelect = (result) => {
+    setQuery(''); setOpen(false);
+    onResult(result);
+  };
+
+  React.useEffect(() => {
+    const handler = e => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') { e.preventDefault(); setOpen(true); inputRef.current?.focus(); } };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  return (
+    <div style={{ padding:'8px 8px 0', position:'relative' }}>
+      <div style={{ position:'relative' }}>
+        <Icons.Search size={13} color="hsl(220,15%,45%)" style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }} />
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder="Search… ( / )"
+          style={{
+            width:'100%', padding:'7px 8px 7px 28px', fontSize:12,
+            background:'hsl(220,20%,16%)', border:'1px solid hsl(220,20%,22%)',
+            borderRadius:6, color:'hsl(220,15%,75%)', fontFamily:'inherit', outline:'none',
+            boxSizing:'border-box',
+          }}
+        />
+      </div>
+      {open && results.length > 0 && (
+        <div style={{
+          position:'absolute', top:'100%', left:8, right:8, zIndex:500,
+          background:'white', borderRadius:8, boxShadow:'0 8px 32px rgba(0,0,0,0.18)',
+          border:'1px solid hsl(220,15%,88%)', overflow:'hidden', marginTop:4,
+        }}>
+          {results.map((r, i) => (
+            <div key={i} onMouseDown={() => handleSelect(r)} style={{
+              display:'flex', alignItems:'center', gap:10, padding:'9px 14px',
+              cursor:'pointer', borderBottom: i < results.length-1 ? '1px solid hsl(220,15%,93%)' : 'none',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,97%)'}
+            onMouseLeave={e => e.currentTarget.style.background='white'}>
+              <Badge cls={r.cls}>{r.type}</Badge>
+              <span style={{ fontSize:13, fontWeight:500 }}>{r.label}</span>
+              {r.sub && <span style={{ fontSize:12, color:'hsl(220,10%,60%)' }}>{r.sub}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {open && q.length >= 2 && results.length === 0 && (
+        <div style={{
+          position:'absolute', top:'100%', left:8, right:8, zIndex:500,
+          background:'white', borderRadius:8, boxShadow:'0 8px 32px rgba(0,0,0,0.18)',
+          border:'1px solid hsl(220,15%,88%)', padding:'16px', fontSize:13,
+          color:'hsl(220,10%,56%)', textAlign:'center', marginTop:4,
+        }}>No results for "{query}"</div>
+      )}
+    </div>
+  );
+}
+
 const navItems = [
   { id:'dashboard', label:'Dashboard',       Icon: Icons.Dashboard },
   { id:'inventory', label:'Inventory',       Icon: Icons.Package   },
   { id:'pos',       label:'Purchase Orders', Icon: Icons.Clipboard },
+  { id:'bills',     label:'Vendor Bills',    Icon: Icons.Dollar    },
   { id:'bom',       label:'BOM & COGS',      Icon: Icons.Layers    },
   { id:'fg',        label:'Finished Goods',  Icon: Icons.Truck     },
   { id:'suppliers', label:'Suppliers',        Icon: Icons.Users     },
@@ -3112,12 +3446,21 @@ export default function App() {
   const [page, setPage] = useState('dashboard');
   const [collapsed, setCollapsed] = useState(false);
   const [supplierFilter, setSupplierFilter] = useState(null);
+  const [searchPO, setSearchPO]   = useState(null);
+  const [searchFGO, setSearchFGO] = useState(null);
 
   const navigate = (p, filter=null) => { setSupplierFilter(filter); setPage(p); };
+
+  const handleSearchResult = (result) => {
+    if (result.type === 'PO')       { setSearchPO(result.data);  }
+    else if (result.type === 'FGO') { setSearchFGO(result.data); }
+    else if (result.page)           { setPage(result.page); }
+  };
 
   const pageComponent = page === 'dashboard' ? <Dashboard setPage={setPage} />
     : page === 'inventory' ? <InventoryPage />
     : page === 'pos'       ? <PurchaseOrdersPage supplierFilter={supplierFilter} clearFilter={() => setSupplierFilter(null)} />
+    : page === 'bills'     ? <BillsPage />
     : page === 'bom'       ? <BOMPage />
     : page === 'fg'        ? <FinishedGoodsPage />
     : page === 'suppliers' ? <SupplierDirectory navigate={navigate} />
@@ -3146,6 +3489,9 @@ export default function App() {
                 <div style={{ display:'flex', justifyContent:'center' }}><Icons.Dollar size={18} color="hsl(220,70%,60%)" /></div>
               )}
             </div>
+
+            {/* Global search */}
+            {!collapsed && <GlobalSearch setPage={setPage} onResult={handleSearchResult} />}
 
             <div style={{ padding: collapsed ? '8px 0' : '8px', flex:1 }}>
               <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:2, color:'hsl(220,15%,40%)', padding: collapsed ? '8px 0 4px' : '8px 8px 4px', textAlign: collapsed ? 'center' : 'left' }}>
@@ -3179,6 +3525,10 @@ export default function App() {
             {pageComponent}
           </div>
         </div>
+
+        {/* Global search result modals */}
+        <PODetail po={searchPO} open={!!searchPO} onClose={() => setSearchPO(null)} />
+        <FGODetail order={searchFGO} open={!!searchFGO} onClose={() => setSearchFGO(null)} />
       </ToastProvider>
     </DataProvider>
   );

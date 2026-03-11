@@ -1221,7 +1221,8 @@ function Dashboard({ setPage }) {
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
 
         {/* Inventory — whole card clicks to Inventory page */}
-        <Card style={{ cursor:'pointer' }} onClick={() => setPage('inventory')}>
+        <div onClick={() => setPage('inventory')} style={{ cursor:'pointer' }}>
+          <Card>
           <CardHeader>
             <CardTitle style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <span><Icons.Package size={15} /> Current Inventory by Part</span>
@@ -1242,7 +1243,8 @@ function Dashboard({ setPage }) {
               </div>
             ))}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
 
         {/* FGOs — header clicks to FG page, each row opens FGO modal */}
         <Card>

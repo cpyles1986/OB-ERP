@@ -287,6 +287,8 @@ function DataProvider({ children }) {
   const addPart             = useCallback(pt => setParts(p     => [...p, { ...pt, id: nid('part') }]), []);
   const addFinishedGood     = useCallback(fg => setFGs(p       => [...p, { ...fg, id: nid('fg')   }]), []);
   const addPurchaseOrder    = useCallback(po => setPOs(p       => [...p, { ...po, id: nid('po')   }]), []);
+  const addFinishedGoodOrder = useCallback(fgo => setFGOs(p   => [...p, { ...fgo, id: nid('fgo')  }]), []);
+  const deleteFinishedGoodOrder = useCallback(fgoId => setFGOs(p => p.filter(o => o.id !== fgoId)), []);
 
   const updatePurchaseOrder = useCallback((poId, updates) => {
     setPOs(prev => {
@@ -327,6 +329,8 @@ function DataProvider({ children }) {
   const updateBOM           = useCallback((fgId, bom)     => setFGs(p => p.map(fg => fg.id === fgId ? { ...fg, bom } : fg)), []);
   const updatePart          = useCallback((partId, updates) => setParts(p => p.map(pt => pt.id === partId ? { ...pt, ...updates } : pt)), []);
   const deletePart          = useCallback((partId) => setParts(p => p.filter(pt => pt.id !== partId)), []);
+  const updateSupplier      = useCallback((supId, updates) => setSuppliers(p => p.map(s => s.id === supId ? { ...s, ...updates } : s)), []);
+  const deleteSupplier      = useCallback((supId) => setSuppliers(p => p.filter(s => s.id !== supId)), []);
   const updateFinishedGood  = useCallback((fgId, updates) => setFGs(p => p.map(fg => fg.id === fgId ? { ...fg, ...updates } : fg)), []);
   const deleteFinishedGood  = useCallback((fgId) => setFGs(p => p.filter(fg => fg.id !== fgId)), []);
   const addInventoryRecord    = useCallback(r  => setInventory(p => [...p, { ...r, id: nid('inv') }]), []);
@@ -356,8 +360,8 @@ function DataProvider({ children }) {
   return (
     <DataContext.Provider value={{
       suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders,
-      addSupplier, addPart, addFinishedGood, addPurchaseOrder, updatePurchaseOrder,
-      updateBOM, updatePart, deletePart, updateFinishedGood, deleteFinishedGood, updateFinishedGoodOrder, getPartById, getSupplierById,
+      addSupplier, addPart, addFinishedGood, addPurchaseOrder, addFinishedGoodOrder, deleteFinishedGoodOrder, updatePurchaseOrder,
+      updateBOM, updatePart, deletePart, updateSupplier, deleteSupplier, updateFinishedGood, deleteFinishedGood, updateFinishedGoodOrder, getPartById, getSupplierById,
       addInventoryRecord, updateInventoryRecord, deleteInventoryRecord,
       accounts, journal, addAccount, postEntry, reverseEntry, postSalesSummary,
       activityLog, logEvent,
@@ -450,14 +454,17 @@ const TD = ({ children, right, mono, muted, bold }) => (
 );
 
 // ── Modal ──────────────────────────────────────────────────────────────────────
-const Modal = ({ title, open, onClose, children, wide }) => {
+const Modal = ({ title, open, onClose, children, wide, headerAction }) => {
   if (!open) return null;
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div style={{ background:'white', borderRadius:10, width:'100%', maxWidth: wide ? 680 : 540, maxHeight:'88vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
-        <div style={{ padding:'20px 24px 16px', borderBottom:'1px solid hsl(220,15%,90%)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span style={{ fontSize:16, fontWeight:600 }}>{title}</span>
-          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:20, color:'hsl(220,10%,56%)', lineHeight:1 }}>×</button>
+        <div style={{ padding:'16px 24px', borderBottom:'1px solid hsl(220,15%,90%)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            {headerAction}
+            <span style={{ fontSize:16, fontWeight:600 }}>{title}</span>
+          </div>
+          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:20, color:'hsl(220,10%,56%)', lineHeight:1, cursor:'pointer' }}>×</button>
         </div>
         <div style={{ padding:24 }}>{children}</div>
       </div>
@@ -946,22 +953,22 @@ function PODetail({ po, open, onClose, onBack }) {
   );
 
   return (
-    <Modal title="" open={open} onClose={onClose} wide>
+    <Modal title="" open={open} onClose={onClose} wide
+      headerAction={onBack && (
+        <button onClick={onBack} style={{
+          background:'none', border:'none', cursor:'pointer', padding:'2px 0',
+          color:'hsl(220,10%,56%)', display:'flex', alignItems:'center', gap:4, fontSize:13,
+          fontFamily:'inherit', fontWeight:500,
+        }}
+        onMouseEnter={e=>e.currentTarget.style.color='hsl(220,25%,10%)'}
+        onMouseLeave={e=>e.currentTarget.style.color='hsl(220,10%,56%)'}>
+          ← Back
+        </button>
+      )}>
       <div style={{ fontFamily:'DM Sans, system-ui, sans-serif' }}>
         {/* Header */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
           <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
-            {onBack && (
-              <button onClick={onBack} style={{
-                background:'none', border:'none', cursor:'pointer', padding:'2px 0', marginTop:3,
-                color:'hsl(220,10%,56%)', display:'flex', alignItems:'center', gap:4, fontSize:13,
-                fontFamily:'inherit', fontWeight:500,
-              }}
-              onMouseEnter={e=>e.currentTarget.style.color='hsl(220,25%,10%)'}
-              onMouseLeave={e=>e.currentTarget.style.color='hsl(220,10%,56%)'}>
-                ← Back
-              </button>
-            )}
             <div>
               <div style={{ fontSize:20, fontWeight:700, letterSpacing:'-0.5px' }}>PURCHASE ORDER</div>
               <div className="mono" style={{ fontSize:16, fontWeight:600, color:'hsl(220,70%,45%)', marginTop:4 }}>{po.poNumber}</div>
@@ -1174,6 +1181,8 @@ function BOMEditor({ fgId, bom }) {
 // ── Pages ──────────────────────────────────────────────────────────────────────
 function Dashboard({ setPage }) {
   const { parts, inventoryRecords, purchaseOrders, finishedGoodOrders, finishedGoods, getPartById, getSupplierById, activityLog } = useData();
+  const [selectedPO, setSelectedPO]   = useState(null);
+  const [selectedFGO, setSelectedFGO] = useState(null);
 
   const totalPartsSpend = purchaseOrders.reduce((s,po) => s+po.totalCost, 0);
   const totalFGOnOrder  = finishedGoodOrders.filter(o=>o.status!=='received').reduce((s,o) => s+o.qty, 0);
@@ -1188,6 +1197,8 @@ function Dashboard({ setPage }) {
     const locations = records.map(r => `${r.location}: ${r.qty}`);
     return { part, totalQty, locations };
   });
+
+  const rowHover = { onMouseEnter: e => e.currentTarget.style.background='hsl(220,70%,98%)', onMouseLeave: e => e.currentTarget.style.background='transparent' };
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
@@ -1208,8 +1219,15 @@ function Dashboard({ setPage }) {
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-        <Card>
-          <CardHeader><CardTitle><Icons.Package size={15} /> Current Inventory by Part</CardTitle></CardHeader>
+
+        {/* Inventory — whole card clicks to Inventory page */}
+        <Card style={{ cursor:'pointer' }} onClick={() => setPage('inventory')}>
+          <CardHeader>
+            <CardTitle style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span><Icons.Package size={15} /> Current Inventory by Part</span>
+              <span style={{ fontSize:11, color:'hsl(220,70%,45%)', fontWeight:600 }}>View all →</span>
+            </CardTitle>
+          </CardHeader>
           <CardContent>
             {inventorySummary.map(({ part, totalQty, locations }) => (
               <div key={part.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'10px 0', borderBottom:'1px solid hsl(220,15%,92%)' }}>
@@ -1226,13 +1244,21 @@ function Dashboard({ setPage }) {
           </CardContent>
         </Card>
 
+        {/* FGOs — header clicks to FG page, each row opens FGO modal */}
         <Card>
-          <CardHeader><CardTitle><Icons.Truck size={15} /> Finished Good Orders</CardTitle></CardHeader>
-          <CardContent>
+          <CardHeader>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer' }} onClick={() => setPage('fg')}>
+              <CardTitle><Icons.Truck size={15} /> Finished Good Orders</CardTitle>
+              <span style={{ fontSize:11, color:'hsl(220,70%,45%)', fontWeight:600 }}>View all →</span>
+            </div>
+          </CardHeader>
+          <CardContent style={{ padding:0 }}>
             {finishedGoodOrders.map(order => (
-              <div key={order.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid hsl(220,15%,92%)' }}>
+              <div key={order.id} onClick={() => setSelectedFGO(order)}
+                style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 16px', borderBottom:'1px solid hsl(220,15%,92%)', cursor:'pointer' }}
+                {...rowHover}>
                 <div>
-                  <div className="mono" style={{ fontSize:13, fontWeight:500 }}>{order.orderNumber}</div>
+                  <div className="mono" style={{ fontSize:13, fontWeight:500, color:'hsl(220,70%,45%)' }}>{order.orderNumber}</div>
                   <div style={{ fontSize:12, color:'hsl(220,10%,56%)', marginTop:2 }}>{order.qty} units · Ordered {order.dateOrdered}</div>
                 </div>
                 <div style={{ textAlign:'right', display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
@@ -1241,7 +1267,7 @@ function Dashboard({ setPage }) {
                 </div>
               </div>
             ))}
-            <div style={{ marginTop:12, paddingTop:10, borderTop:'1px solid hsl(220,15%,90%)', display:'flex', justifyContent:'space-between', fontSize:13 }}>
+            <div style={{ padding:'12px 16px', borderTop:'1px solid hsl(220,15%,90%)', display:'flex', justifyContent:'space-between', fontSize:13 }}>
               <span style={{ color:'hsl(220,10%,56%)' }}>Unit COGS</span>
               <span className="mono" style={{ fontWeight:600 }}>{fmt(totalUnitCost)}</span>
             </div>
@@ -1249,6 +1275,7 @@ function Dashboard({ setPage }) {
         </Card>
       </div>
 
+      {/* POs — each row opens PO modal */}
       <Card>
         <CardHeader><CardTitle><Icons.Clipboard size={15} /> Recent Purchase Orders</CardTitle></CardHeader>
         <CardContent style={{ padding:'0 0 4px' }}>
@@ -1261,7 +1288,10 @@ function Dashboard({ setPage }) {
                 const supplier = getSupplierById(po.supplierId);
                 const itemNames = po.items.map(i => `${getPartById(i.partId)?.name} ×${i.qty}`).join(', ');
                 return (
-                  <tr key={po.id}>
+                  <tr key={po.id} style={{ cursor:'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,98%)'}
+                    onMouseLeave={e => e.currentTarget.style.background='white'}
+                    onClick={() => setSelectedPO(po)}>
                     <TD mono><span style={{ color:'hsl(220,70%,45%)', fontSize:12 }}>{po.poNumber}</span></TD>
                     <TD>{supplier?.shortName}</TD>
                     <TD muted><span style={{ fontSize:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block', maxWidth:200 }}>{itemNames}</span></TD>
@@ -1317,11 +1347,12 @@ function Dashboard({ setPage }) {
           )}
         </CardContent>
       </Card>
+
+      <PODetail po={selectedPO} open={!!selectedPO} onClose={() => setSelectedPO(null)} />
+      <FGODetail order={selectedFGO} open={!!selectedFGO} onClose={() => setSelectedFGO(null)} />
     </div>
   );
 }
-
-// ── Add Inventory Record Dialog ────────────────────────────────────────────────
 function AddInventoryDialog() {
   const { parts, finishedGoods, suppliers, addInventoryRecord } = useData();
   const [open, setOpen] = useState(false);
@@ -1910,129 +1941,320 @@ function BOMPage() {
   );
 }
 
-function FinishedGoodsPage() {
-  const { finishedGoodOrders, updateFinishedGoodOrder } = useData();
-  const [dateModal, setDateModal] = useState(null); // { orderId, newStatus }
+// ── FGO Detail Modal ───────────────────────────────────────────────────────────
+function FGODetail({ order, open, onClose }) {
+  const { updateFinishedGoodOrder, deleteFinishedGoodOrder, finishedGoods } = useData();
+  const [f, setF] = useState({});
+  const [dateModal, setDateModal] = useState(false);
   const [dateInput, setDateInput] = useState(today());
+  const fld = k => ({ value: f[k]??'', onChange: e => setF(p=>({...p,[k]:e.target.value})) });
 
-  const revenue  = finishedGoodOrders.reduce((s,o) => s+(o.qtySold*o.salePrice), 0);
-  const sold     = finishedGoodOrders.reduce((s,o) => s+o.qtySold, 0);
-  const onOrder  = finishedGoodOrders.filter(o=>o.status!=='received').reduce((s,o) => s+o.qty, 0);
-  const received = finishedGoodOrders.filter(o=>o.status==='received').reduce((s,o) => s+o.qty, 0);
-  const unsold   = received - sold;
+  useEffect(() => { if (open && order) setF({ ...order }); }, [open, order]);
+  if (!order) return null;
 
   const fgStatusOptions = ['on-order','in-production','shipped','received'];
   const fgStatusLabel   = { 'on-order':'On Order', 'in-production':'In Production', shipped:'Shipped', received:'Received' };
+  const fg = finishedGoods.find(g => g.sku === order.sku);
 
-  const handleStatusChange = (order, newStatus) => {
-    if (newStatus === order.status) return;
-    if (newStatus === 'received') {
-      // Prompt for received date before posting
-      setDateModal({ orderId: order.id, newStatus });
+  const handleStatusChange = v => {
+    if (v === 'received' && order.status !== 'received') {
+      setDateModal(true);
       setDateInput(today());
     } else {
-      updateFinishedGoodOrder(order.id, { status: newStatus });
-      toast.success(`${order.orderNumber} → ${fgStatusLabel[newStatus]}`);
+      setF(p => ({...p, status: v}));
     }
   };
 
   const confirmReceived = () => {
-    updateFinishedGoodOrder(dateModal.orderId, { status: 'received', dateReceived: dateInput });
-    toast.success('FG order marked received — COGS capitalized to journal');
-    setDateModal(null);
+    setF(p => ({...p, status:'received', dateReceived: dateInput}));
+    setDateModal(false);
   };
+
+  const save = () => {
+    const updates = {
+      sku: f.sku,
+      qty: parseInt(f.qty)||0,
+      unitCost: parseFloat(f.unitCost)||0,
+      status: f.status,
+      dateOrdered: f.dateOrdered,
+      dateReceived: f.dateReceived||undefined,
+      factory: f.factory||undefined,
+      carrier: f.carrier||undefined,
+      tracking: f.tracking||undefined,
+      eta: f.eta||undefined,
+      notes: f.notes||undefined,
+    };
+    // If status changed to received and wasn't before, trigger journal + date
+    if (f.status === 'received' && order.status !== 'received') {
+      updates.dateReceived = f.dateReceived || today();
+    }
+    updateFinishedGoodOrder(order.id, updates);
+    toast.success(`${order.orderNumber} saved`);
+    onClose();
+  };
+
+  const handleDelete = () => {
+    if (!confirm(`Delete ${order.orderNumber}? This cannot be undone.`)) return;
+    deleteFinishedGoodOrder(order.id);
+    toast.success(`${order.orderNumber} deleted`);
+    onClose();
+  };
+
+  const totalCost = (parseInt(f.qty)||0) * (parseFloat(f.unitCost)||0);
+  const s = badgeStyle[fgStatusCls[f.status]] || badgeStyle['badge-muted'];
+
+  return (
+    <Modal title={order.orderNumber} open={open} onClose={onClose} wide>
+      <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+
+        {/* Header strip */}
+        <div style={{ display:'flex', gap:16, alignItems:'center', background:'hsl(220,15%,97%)', borderRadius:8, padding:'12px 16px' }}>
+          <div>
+            <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>SKU</div>
+            <div className="mono" style={{ fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)' }}>{order.sku}</div>
+          </div>
+          {fg && <div>
+            <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Product</div>
+            <div style={{ fontSize:13, fontWeight:500 }}>{fg.name}</div>
+          </div>}
+          <div style={{ marginLeft:'auto', textAlign:'right' }}>
+            <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Total COGS</div>
+            <div className="mono" style={{ fontSize:18, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(totalCost)}</div>
+          </div>
+        </div>
+
+        {/* Core fields */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+          <Field label="SKU">
+            <Select value={f.sku||''} onChange={v => setF(p=>({...p,sku:v}))}>
+              {finishedGoods.map(g => <option key={g.id} value={g.sku}>{g.sku}</option>)}
+            </Select>
+          </Field>
+          <Field label="Qty Ordered"><Input type="number" min="1" {...fld('qty')} className="mono" /></Field>
+          <Field label="Unit COGS ($)"><Input type="number" step="0.01" min="0" {...fld('unitCost')} className="mono" /></Field>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+          <Field label="Status">
+            <select value={f.status||'on-order'} onChange={e => handleStatusChange(e.target.value)}
+              style={{ ...inlineSelectStyle, ...s, width:'100%', padding:'8px 10px', borderRadius:6, border:'1px solid hsl(220,15%,85%)', fontSize:13 }}>
+              {fgStatusOptions.map(opt => <option key={opt} value={opt}>{fgStatusLabel[opt]}</option>)}
+            </select>
+          </Field>
+          <Field label="Date Ordered"><Input type="date" {...fld('dateOrdered')} /></Field>
+          <Field label="Date Received"><Input type="date" {...fld('dateReceived')} /></Field>
+        </div>
+
+        {/* Logistics */}
+        <div style={{ borderTop:'1px solid hsl(220,15%,90%)', paddingTop:16 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:'hsl(220,10%,56%)', textTransform:'uppercase', letterSpacing:0.5, marginBottom:10 }}>Logistics</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12 }}>
+            <Field label="Factory"><Input {...fld('factory')} placeholder="e.g. Dongguan Factory" /></Field>
+            <Field label="Carrier"><Input {...fld('carrier')} placeholder="e.g. DHL, FedEx" /></Field>
+            <Field label="Tracking #"><Input {...fld('tracking')} className="mono" placeholder="1Z999..." /></Field>
+            <Field label="ETA"><Input type="date" {...fld('eta')} /></Field>
+          </div>
+        </div>
+
+        {/* Notes */}
+        <Field label="Notes"><Input {...fld('notes')} placeholder="Any additional notes…" /></Field>
+
+        {/* Actions */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderTop:'1px solid hsl(220,15%,90%)', paddingTop:16 }}>
+          <button onClick={handleDelete} style={{ fontSize:12, color:'hsl(0,72%,51%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+            Delete order
+          </button>
+          <div style={{ display:'flex', gap:8 }}>
+            <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+            <Btn onClick={save}>Save Changes</Btn>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirm received sub-modal */}
+      <Modal title="Confirm Receipt" open={dateModal} onClose={() => setDateModal(false)}>
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ background:'hsl(160,50%,95%)', border:'1px solid hsl(160,50%,80%)', borderRadius:8, padding:'12px 16px', fontSize:13, color:'hsl(160,40%,30%)' }}>
+            Marking as <strong>Received</strong> will post a COGS capitalization entry to the journal on save.
+          </div>
+          <Field label="Date Received">
+            <Input type="date" value={dateInput} onChange={e => setDateInput(e.target.value)} />
+          </Field>
+          <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+            <Btn variant="ghost" onClick={() => setDateModal(false)}>Cancel</Btn>
+            <Btn onClick={confirmReceived}>Confirm</Btn>
+          </div>
+        </div>
+      </Modal>
+    </Modal>
+  );
+}
+
+// ── Create FGO Dialog ──────────────────────────────────────────────────────────
+function CreateFGODialog() {
+  const { addFinishedGoodOrder, finishedGoods, finishedGoodOrders } = useData();
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({});
+  const fld = k => ({ value: f[k]??'', onChange: e => setF(p=>({...p,[k]:e.target.value})) });
+  const reset = () => setF({});
+
+  const nextNum = `FGO-${new Date().getFullYear()}-${String(finishedGoodOrders.length + 1).padStart(3,'0')}`;
+  const selectedFG = finishedGoods.find(g => g.sku === f.sku);
+  const defaultCost = selectedFG
+    ? selectedFG.bom.reduce((s,l) => s + (l.qty * (selectedFG.bom.find?.(x=>x)?.unitCost||0)), 0) + selectedFG.assemblyCost
+    : 0;
+
+  const valid = f.sku && f.qty && parseInt(f.qty) > 0 && f.unitCost && f.dateOrdered;
+
+  const submit = () => {
+    if (!valid) return;
+    addFinishedGoodOrder({
+      orderNumber: nextNum,
+      sku: f.sku,
+      qty: parseInt(f.qty),
+      unitCost: parseFloat(f.unitCost),
+      status: f.status || 'on-order',
+      dateOrdered: f.dateOrdered,
+      dateReceived: f.dateReceived || undefined,
+      factory: f.factory || undefined,
+      carrier: f.carrier || undefined,
+      tracking: f.tracking || undefined,
+      eta: f.eta || undefined,
+      notes: f.notes || undefined,
+      qtySold: 0,
+      salePrice: selectedFG?.retailPrice || 0,
+    });
+    toast.success(`${nextNum} created`);
+    reset(); setOpen(false);
+  };
+
+  return (
+    <>
+      <Btn onClick={() => setOpen(true)}><Icons.Plus /> New FG Order</Btn>
+      <Modal title="Create FG Production Order" open={open} onClose={() => { setOpen(false); reset(); }} wide>
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ background:'hsl(220,15%,97%)', borderRadius:8, padding:'10px 14px', fontSize:13 }}>
+            Order # will be <span className="mono" style={{ fontWeight:700, color:'hsl(220,70%,45%)' }}>{nextNum}</span>
+          </div>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+            <Field label="SKU *">
+              <Select value={f.sku||''} onChange={v => {
+                const fg = finishedGoods.find(g => g.sku === v);
+                setF(p => ({...p, sku:v, unitCost: fg ? '' : p.unitCost}));
+              }} placeholder="Select SKU…">
+                {finishedGoods.map(g => <option key={g.id} value={g.sku}>{g.sku}</option>)}
+              </Select>
+            </Field>
+            <Field label="Qty *"><Input type="number" min="1" {...fld('qty')} placeholder="e.g. 300" className="mono" autoFocus /></Field>
+            <Field label="Unit COGS ($) *">
+              <Input type="number" step="0.01" min="0" {...fld('unitCost')} className="mono"
+                placeholder={selectedFG ? fmt(selectedFG.assemblyCost) : '0.00'} />
+            </Field>
+          </div>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+            <Field label="Status">
+              <Select value={f.status||'on-order'} onChange={v => setF(p=>({...p,status:v}))}>
+                <option value="on-order">On Order</option>
+                <option value="in-production">In Production</option>
+                <option value="shipped">Shipped</option>
+                <option value="received">Received</option>
+              </Select>
+            </Field>
+            <Field label="Date Ordered *"><Input type="date" {...fld('dateOrdered')} /></Field>
+            <Field label="Date Received"><Input type="date" {...fld('dateReceived')} /></Field>
+          </div>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12 }}>
+            <Field label="Factory"><Input {...fld('factory')} placeholder="e.g. Dongguan" /></Field>
+            <Field label="Carrier"><Input {...fld('carrier')} placeholder="e.g. DHL" /></Field>
+            <Field label="Tracking #"><Input {...fld('tracking')} className="mono" /></Field>
+            <Field label="ETA"><Input type="date" {...fld('eta')} /></Field>
+          </div>
+
+          <Field label="Notes"><Input {...fld('notes')} placeholder="Optional…" /></Field>
+
+          <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+            <Btn variant="ghost" onClick={() => { setOpen(false); reset(); }}>Cancel</Btn>
+            <Btn onClick={submit} disabled={!valid}>Create Order</Btn>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+// ── Finished Goods Page ────────────────────────────────────────────────────────
+function FinishedGoodsPage() {
+  const { finishedGoodOrders, finishedGoods } = useData();
+  const [selectedFGO, setSelectedFGO] = useState(null);
+
+  const onOrder  = finishedGoodOrders.filter(o=>o.status!=='received').reduce((s,o) => s+o.qty, 0);
+  const received = finishedGoodOrders.filter(o=>o.status==='received').reduce((s,o) => s+o.qty, 0);
+  const totalCOGS = finishedGoodOrders.reduce((s,o) => s+o.qty*o.unitCost, 0);
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>Finished Goods</div>
-          <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>ELEMENT-B_10BLD — OneBlade Element Razor, Black</div>
+          <div style={{ fontSize:22, fontWeight:700 }}>Finished Goods Orders</div>
+          <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>Production runs · Click any order to open and edit</div>
         </div>
-        <AddFinishedGoodDialog />
+        <CreateFGODialog />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:16 }}>
-        <StatCard title="On Order / In Production" value={`${onOrder}`} icon={Icons.Truck} variant="warning" />
-        <StatCard title="In Warehouse (unsold)"    value={`${unsold}`}  icon={Icons.Package} />
-        <StatCard title="Sold"                     value={`${sold}`}    subtitle={fmt(revenue)} icon={Icons.Shopping} variant="success" />
-        <StatCard title="Revenue"                  value={fmt(revenue)} subtitle="From sold units" icon={Icons.Dollar} variant="primary" />
-      </div>
-
-      <div style={{ fontSize:12, color:'hsl(220,10%,56%)', display:'flex', alignItems:'center', gap:6 }}>
-        <span style={{ background:'hsl(220,15%,92%)', borderRadius:4, padding:'2px 7px', fontSize:11 }}>Tip</span>
-        Click any status badge to update it inline · Marking as Received auto-posts COGS to the journal
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+        <StatCard title="In Production / On Order" value={`${onOrder} units`} icon={Icons.Truck} variant="warning" />
+        <StatCard title="Received into Warehouse"  value={`${received} units`} icon={Icons.Package} variant="success" />
+        <StatCard title="Total COGS Committed"     value={fmt(totalCOGS)} icon={Icons.Dollar} variant="primary" />
       </div>
 
       <Card>
-        <CardHeader><CardTitle style={{ fontSize:14 }}>All Orders</CardTitle></CardHeader>
+        <CardHeader><CardTitle style={{ fontSize:14 }}>All FG Orders</CardTitle></CardHeader>
         <CardContent style={{ padding:0 }}>
           <table>
             <thead>
               <tr style={{ background:'hsl(220,15%,96%)' }}>
-                <TH>Order #</TH><TH right>Qty</TH><TH right>Unit COGS</TH><TH right>Total COGS</TH><TH>Status</TH><TH right>Sold</TH><TH right>Revenue</TH><TH>Ordered</TH><TH>Received</TH>
+                <TH>Order #</TH><TH>SKU</TH><TH right>Qty</TH><TH right>Unit COGS</TH><TH right>Total COGS</TH><TH>Status</TH><TH>Ordered</TH><TH>Received</TH><TH>ETA</TH>
               </tr>
             </thead>
             <tbody>
-              {finishedGoodOrders.map(order => {
-                const s = badgeStyle[fgStatusCls[order.status]] || badgeStyle['badge-muted'];
-                return (
-                  <tr key={order.id}
-                    onMouseEnter={e => e.currentTarget.style.background='hsl(220,15%,97%)'}
-                    onMouseLeave={e => e.currentTarget.style.background='white'}>
-                    <TD><span className="mono" style={{ fontSize:12, fontWeight:500 }}>{order.orderNumber}</span></TD>
-                    <TD right mono>{order.qty}</TD>
-                    <TD right mono>{fmt(order.unitCost)}</TD>
-                    <TD right mono bold>{fmt(order.qty*order.unitCost)}</TD>
-                    <TD>
-                      <select
-                        value={order.status}
-                        onChange={e => { e.stopPropagation(); handleStatusChange(order, e.target.value); }}
-                        style={{ ...inlineSelectStyle, ...s }}>
-                        {fgStatusOptions.map(opt => (
-                          <option key={opt} value={opt}>{fgStatusLabel[opt]}</option>
-                        ))}
-                      </select>
-                    </TD>
-                    <TD right mono>{order.qtySold}</TD>
-                    <TD right mono><span style={{ color:'hsl(160,60%,35%)' }}>{fmt(order.qtySold*order.salePrice)}</span></TD>
-                    <TD muted>{order.dateOrdered}</TD>
-                    <TD muted>{order.dateReceived||'—'}</TD>
-                  </tr>
-                );
-              })}
+              {finishedGoodOrders.map(order => (
+                <tr key={order.id} style={{ cursor:'pointer' }}
+                  onClick={() => setSelectedFGO(order)}
+                  onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,98%)'}
+                  onMouseLeave={e => e.currentTarget.style.background='white'}>
+                  <TD><span className="mono" style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)' }}>{order.orderNumber}</span></TD>
+                  <TD><span className="mono" style={{ fontSize:12 }}>{order.sku}</span></TD>
+                  <TD right mono>{order.qty.toLocaleString()}</TD>
+                  <TD right mono>{fmt(order.unitCost)}</TD>
+                  <TD right mono bold>{fmt(order.qty*order.unitCost)}</TD>
+                  <TD><Badge cls={fgStatusCls[order.status]}>{order.status}</Badge></TD>
+                  <TD muted>{order.dateOrdered}</TD>
+                  <TD muted>{order.dateReceived||'—'}</TD>
+                  <TD muted>{order.eta||'—'}</TD>
+                </tr>
+              ))}
             </tbody>
             <tfoot>
               <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
-                <td style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
-                <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{finishedGoodOrders.reduce((s,o)=>s+o.qty,0)}</td>
+                <td colSpan={2} style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
+                <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{finishedGoodOrders.reduce((s,o)=>s+o.qty,0).toLocaleString()}</td>
                 <td/>
-                <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(finishedGoodOrders.reduce((s,o)=>s+o.qty*o.unitCost,0))}</td>
-                <td/>
-                <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{sold}</td>
-                <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(160,60%,35%)' }}>{fmt(revenue)}</td>
-                <td colSpan={2}/>
+                <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(totalCOGS)}</td>
+                <td colSpan={4}/>
               </tr>
             </tfoot>
           </table>
         </CardContent>
       </Card>
 
-      {/* Date received confirmation modal */}
-      <Modal title="Confirm Receipt" open={!!dateModal} onClose={() => setDateModal(null)}>
-        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          <div style={{ background:'hsl(160,50%,95%)', border:'1px solid hsl(160,50%,80%)', borderRadius:8, padding:'12px 16px', fontSize:13, color:'hsl(160,40%,30%)' }}>
-            Marking as <strong>Received</strong> will post a journal entry capitalizing COGS into Finished Goods Inventory.
-          </div>
-          <Field label="Date Received">
-            <Input type="date" value={dateInput} onChange={e => setDateInput(e.target.value)} />
-          </Field>
-          <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-            <Btn variant="ghost" onClick={() => setDateModal(null)}>Cancel</Btn>
-            <Btn onClick={confirmReceived}>Confirm Receipt</Btn>
-          </div>
-        </div>
-      </Modal>
+      <FGODetail
+        order={selectedFGO}
+        open={!!selectedFGO}
+        onClose={() => setSelectedFGO(null)}
+      />
     </div>
   );
 }
@@ -2080,14 +2302,49 @@ function SupplierDirectory({ navigate }) {
 
   // Supplier detail modal content
   const SupplierDetailModal = ({ data }) => {
+    const { updateSupplier, deleteSupplier } = useData();
     const [previewPO, setPreviewPO] = useState(null);
+    const [editing, setEditing] = useState(false);
+    const [f, setF] = useState({});
+    const fld = k => ({ value: f[k]??'', onChange: e => setF(p=>({...p,[k]:e.target.value})) });
+
+    useEffect(() => {
+      if (data) { setF({ ...data.s }); setEditing(false); }
+    }, [data?.s?.id]);
+
     if (!data) return null;
     const { s, suppliedParts, suppliedFGs, onOrderValue, balanceOwed } = data;
     const supPOs = purchaseOrders.filter(po => po.supplierId === s.id);
+
+    const save = () => {
+      updateSupplier(s.id, {
+        name: f.name?.trim() || s.name,
+        shortName: f.shortName?.trim() || f.name?.trim() || s.shortName,
+        address: f.address||undefined, city: f.city||undefined, state: f.state||undefined,
+        zip: f.zip||undefined, country: f.country||undefined,
+        email: f.email||undefined, phone: f.phone||undefined,
+        preferredPaymentMethod: f.preferredPaymentMethod||undefined,
+        paymentTerms: f.paymentTerms||undefined, notes: f.notes||undefined,
+      });
+      toast.success(`${f.name || s.name} updated`);
+      setEditing(false);
+    };
+
+    const handleDelete = () => {
+      if (!confirm(`Delete "${s.name}"? This cannot be undone.`)) return;
+      deleteSupplier(s.id);
+      toast.success('Supplier deleted');
+      setSelected(null);
+    };
+
     return (
       <>
-      <Modal title="" open={!!selected} onClose={() => setSelected(null)} wide>
+      <Modal title="" open={!!selected} onClose={() => { setSelected(null); setEditing(false); }} wide
+        headerAction={!editing && (
+          <Btn variant="outline" size="sm" onClick={() => setEditing(true)}>Edit Supplier</Btn>
+        )}>
         <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+
           {/* Header */}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
             <div>
@@ -2098,7 +2355,7 @@ function SupplierDirectory({ navigate }) {
                 </div>
               )}
             </div>
-            <div style={{ display:'flex', gap:10 }}>
+            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
               <div
                 onClick={() => { setSelected(null); navigate('pos', s); }}
                 style={{ background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:8, padding:'10px 16px', textAlign:'right', cursor:'pointer', transition:'background .15s' }}
@@ -2122,68 +2379,111 @@ function SupplierDirectory({ navigate }) {
 
           <Separator />
 
-          {/* Contact & terms */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            {s.address && (
-              <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px' }}>
-                <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:4 }}>Address</div>
-                <div style={{ fontSize:13 }}>{[s.address, s.city, s.state, s.zip, s.country].filter(Boolean).join(', ')}</div>
+          {/* Edit form */}
+          {editing ? (
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <Field label="Supplier Name *"><Input {...fld('name')} autoFocus /></Field>
+                <Field label="Short Name"><Input {...fld('shortName')} /></Field>
               </div>
-            )}
-            {(s.email || s.phone) && (
-              <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px' }}>
-                <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:4 }}>Contact</div>
-                {s.email && <div style={{ fontSize:13, display:'flex', alignItems:'center', gap:5, marginBottom:3 }}><Icons.Mail color="hsl(220,10%,56%)" />{s.email}</div>}
-                {s.phone && <div style={{ fontSize:13, display:'flex', alignItems:'center', gap:5 }}><Icons.Phone color="hsl(220,10%,56%)" />{s.phone}</div>}
+              <Field label="Address"><Input {...fld('address')} /></Field>
+              <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:8 }}>
+                <Field label="City"><Input {...fld('city')} /></Field>
+                <Field label="State"><Input {...fld('state')} /></Field>
+                <Field label="ZIP"><Input {...fld('zip')} /></Field>
+                <Field label="Country"><Input {...fld('country')} /></Field>
               </div>
-            )}
-            {s.preferredPaymentMethod && (
-              <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px' }}>
-                <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:4 }}>Payment Method</div>
-                <div style={{ fontSize:13, fontWeight:500 }}>{s.preferredPaymentMethod}</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <Field label="Email"><Input type="email" {...fld('email')} /></Field>
+                <Field label="Phone"><Input {...fld('phone')} /></Field>
               </div>
-            )}
-            {s.paymentTerms && (
-              <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px' }}>
-                <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:4 }}>Payment Terms</div>
-                <div style={{ fontSize:13, fontWeight:500 }}>{s.paymentTerms}</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <Field label="Payment Method"><Input {...fld('preferredPaymentMethod')} placeholder="e.g. Wire Transfer" /></Field>
+                <Field label="Payment Terms"><Input {...fld('paymentTerms')} placeholder="e.g. Net-30" /></Field>
               </div>
-            )}
-          </div>
-
-          {/* Parts supplied */}
-          {suppliedParts.length > 0 && (
-            <div>
-              <div style={{ fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:8 }}>Parts Supplied</div>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                {suppliedParts.map(p => (
-                  <div key={p.id} style={{ background:'hsl(220,15%,95%)', borderRadius:6, padding:'4px 10px', fontSize:12 }}>
-                    <span style={{ fontWeight:500 }}>{p.name}</span>
-                    <span className="mono" style={{ color:'hsl(220,10%,56%)', marginLeft:6, fontSize:11 }}>{p.sku}</span>
-                    <span className="mono" style={{ color:'hsl(220,70%,45%)', marginLeft:6, fontSize:11 }}>{fmt(p.unitCost)}</span>
-                  </div>
-                ))}
+              <Field label="Notes"><Input {...fld('notes')} placeholder="Optional notes…" /></Field>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <button onClick={handleDelete} style={{ fontSize:12, color:'hsl(0,72%,51%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                  Delete supplier
+                </button>
+                <div style={{ display:'flex', gap:8 }}>
+                  <Btn variant="ghost" onClick={() => { setEditing(false); setF({...s}); }}>Cancel</Btn>
+                  <Btn onClick={save}>Save Changes</Btn>
+                </div>
               </div>
             </div>
-          )}
-
-          {/* FGs */}
-          {suppliedFGs.length > 0 && (
-            <div>
-              <div style={{ fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:8 }}>Used In</div>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                {suppliedFGs.map(fg => (
-                  <div key={fg.id} style={{ background:'hsl(220,70%,96%)', borderRadius:6, padding:'4px 10px', fontSize:12 }}>
-                    <span style={{ fontWeight:500 }}>{fg.name}</span>
-                    <span className="mono" style={{ color:'hsl(220,70%,50%)', marginLeft:6, fontSize:11 }}>{fg.sku}</span>
+          ) : (
+            <>
+              {/* View mode: Contact & terms */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                {s.address && (
+                  <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px' }}>
+                    <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:4 }}>Address</div>
+                    <div style={{ fontSize:13 }}>{[s.address, s.city, s.state, s.zip, s.country].filter(Boolean).join(', ')}</div>
                   </div>
-                ))}
+                )}
+                {(s.email || s.phone) && (
+                  <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px' }}>
+                    <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:4 }}>Contact</div>
+                    {s.email && <div style={{ fontSize:13, display:'flex', alignItems:'center', gap:5, marginBottom:3 }}><Icons.Mail color="hsl(220,10%,56%)" />{s.email}</div>}
+                    {s.phone && <div style={{ fontSize:13, display:'flex', alignItems:'center', gap:5 }}><Icons.Phone color="hsl(220,10%,56%)" />{s.phone}</div>}
+                  </div>
+                )}
+                {s.preferredPaymentMethod && (
+                  <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px' }}>
+                    <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:4 }}>Payment Method</div>
+                    <div style={{ fontSize:13, fontWeight:500 }}>{s.preferredPaymentMethod}</div>
+                  </div>
+                )}
+                {s.paymentTerms && (
+                  <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px' }}>
+                    <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:4 }}>Payment Terms</div>
+                    <div style={{ fontSize:13, fontWeight:500 }}>{s.paymentTerms}</div>
+                  </div>
+                )}
+                {s.notes && (
+                  <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px', gridColumn:'1/-1' }}>
+                    <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:4 }}>Notes</div>
+                    <div style={{ fontSize:13 }}>{s.notes}</div>
+                  </div>
+                )}
               </div>
-            </div>
+
+              {/* Parts supplied */}
+              {suppliedParts.length > 0 && (
+                <div>
+                  <div style={{ fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:8 }}>Parts Supplied</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                    {suppliedParts.map(p => (
+                      <div key={p.id} style={{ background:'hsl(220,15%,95%)', borderRadius:6, padding:'4px 10px', fontSize:12 }}>
+                        <span style={{ fontWeight:500 }}>{p.name}</span>
+                        <span className="mono" style={{ color:'hsl(220,10%,56%)', marginLeft:6, fontSize:11 }}>{p.sku}</span>
+                        <span className="mono" style={{ color:'hsl(220,70%,45%)', marginLeft:6, fontSize:11 }}>{fmt(p.unitCost)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* FGs */}
+              {suppliedFGs.length > 0 && (
+                <div>
+                  <div style={{ fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:8 }}>Used In</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                    {suppliedFGs.map(fg => (
+                      <div key={fg.id} style={{ background:'hsl(220,70%,96%)', borderRadius:6, padding:'4px 10px', fontSize:12 }}>
+                        <span style={{ fontWeight:500 }}>{fg.name}</span>
+                        <span className="mono" style={{ color:'hsl(220,70%,50%)', marginLeft:6, fontSize:11 }}>{fg.sku}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
-          {/* PO history */}
-          {supPOs.length > 0 && (
+          {/* PO history — always visible */}
+          {supPOs.length > 0 && !editing && (
             <div>
               <div style={{ fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:8 }}>Purchase Order History</div>
               <table>

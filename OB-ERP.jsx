@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, createContext, useContext } from "react";
+import React, { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────────
 const FONT_LINK = "https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
@@ -3337,7 +3337,7 @@ function GlobalSearch({ setPage, onResult }) {
   const { suppliers, parts, purchaseOrders, finishedGoodOrders, finishedGoods, bills, getSupplierById } = useData();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
-  const inputRef = React.useRef(null);
+  const inputRef = useRef(null);
 
   const q = query.toLowerCase().trim();
 
@@ -3373,7 +3373,7 @@ function GlobalSearch({ setPage, onResult }) {
     onResult(result);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = e => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') { e.preventDefault(); setOpen(true); inputRef.current?.focus(); } };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);

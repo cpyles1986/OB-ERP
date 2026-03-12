@@ -22,6 +22,7 @@ const initialParts = [
   { id: 'pkg1',  name: 'Blank White Box',                    sku: 'PKG-BOX-WHT',   unitCost: 0.50, freightCost: 0.05, supplierId: 'sup-pkg',    type: 'packaging' },
   { id: 'pkg2',  name: 'Printed Box Sleeve (Black)',         sku: 'PKG-SLV-BLK',   unitCost: 0.20, freightCost: 0.03, supplierId: 'sup-pkg',    type: 'packaging' },
   { id: 'pkg3',  name: 'Inserts',                            sku: 'PKG-INS-01',    unitCost: 0.15, freightCost: 0.02, supplierId: 'sup-pkg',    type: 'packaging' },
+  { id: 'svc-assm-eb', name: 'Assembly — Element Razor Black', sku: 'ASSM-ELEMENT-B', unitCost: 7.00, freightCost: 0.00, supplierId: null, type: 'service', notes: 'Factory assembly fee per unit' },
 ];
 
 const initialFinishedGoods = [{
@@ -29,7 +30,7 @@ const initialFinishedGoods = [{
   assemblyCost: 7.00, retailPrice: 49.00,
   bom: [
     { partId: 'part1', qty: 1 }, { partId: 'part3', qty: 1 }, { partId: 'part4', qty: 1 },
-    { partId: 'part5', qty: 1 }, { partId: 'pkg1',  qty: 1 }, { partId: 'pkg2',  qty: 1 }, { partId: 'pkg3', qty: 1 },
+    { partId: 'part5', qty: 1 }, { partId: 'pkg1',  qty: 1 }, { partId: 'pkg2',  qty: 1 }, { partId: 'pkg3', qty: 1 }, { partId: 'svc-assm-eb', qty: 1 },
   ],
 }];
 
@@ -367,7 +368,9 @@ function DataProvider({ children }) {
   }, []);
 
   const postWOReleasedEntry = useCallback((wo) => {
-    const componentCost = wo.bomLines.reduce((s, l) => s + l.qty * l.unitCost, 0);
+    const physicalLines = wo.bomLines.filter(l => l.partType !== 'service');
+    const componentCost = physicalLines.reduce((s, l) => s + l.qty * l.unitCost, 0);
+    if (componentCost <= 0) return;
     postEntry({ date: wo.dateReleased || today(), memo: `${wo.woNumber} — components consumed into WIP`, source:'wo', sourceId: wo.id, lines:[
       { accountId:'acct-1330', debit: componentCost, credit: 0 },
       { accountId:'acct-1300', debit: 0, credit: componentCost },
@@ -375,14 +378,17 @@ function DataProvider({ children }) {
   }, [postEntry]);
 
   const postWOAssemblyInvoice = useCallback((wo) => {
-    postEntry({ date: wo.dateAssemblyInvoice || today(), memo: `${wo.woNumber} — assembly fee invoiced`, source:'wo', sourceId: wo.id, lines:[
-      { accountId:'acct-1330', debit: wo.assemblyFee, credit: 0 },
-      { accountId:'acct-2100', debit: 0, credit: wo.assemblyFee },
+    const serviceLines = wo.bomLines.filter(l => l.partType === 'service');
+    const assemblyFee  = serviceLines.reduce((s, l) => s + l.qty * l.unitCost, 0);
+    if (assemblyFee <= 0) return;
+    postEntry({ date: wo.dateAssemblyInvoice || today(), memo: `${wo.woNumber} — assembly fee invoiced (${serviceLines.map(l=>l.partName).join(', ')})`, source:'wo', sourceId: wo.id, lines:[
+      { accountId:'acct-1330', debit: assemblyFee, credit: 0 },
+      { accountId:'acct-2100', debit: 0, credit: assemblyFee },
     ]});
   }, [postEntry]);
 
   const postWOCompletedEntry = useCallback((wo) => {
-    const totalWIP = wo.bomLines.reduce((s, l) => s + l.qty * l.unitCost, 0) + (wo.assemblyFee || 0);
+    const totalWIP = wo.bomLines.reduce((s, l) => s + l.qty * l.unitCost, 0);
     postEntry({ date: wo.dateCompleted || today(), memo: `${wo.woNumber} — ${wo.qtyOrdered} units ${wo.sku} completed into FG inventory`, source:'wo', sourceId: wo.id, lines:[
       { accountId:'acct-1310', debit: totalWIP, credit: 0 },
       { accountId:'acct-1330', debit: 0, credit: totalWIP },
@@ -664,6 +670,7 @@ function AddPartDialog() {
               <Select value={f.type||'component'} onChange={v => setF(p=>({...p,type:v}))}>
                 <option value="component">Component</option>
                 <option value="packaging">Packaging</option>
+                <option value="service">Service / Assembly Fee</option>
               </Select>
             </Field>
           </div>
@@ -761,6 +768,7 @@ function EditPartDialog({ part, open, onClose }) {
             <Select value={f.type||'component'} onChange={v => setF(p=>({...p,type:v}))}>
               <option value="component">Component</option>
               <option value="packaging">Packaging</option>
+              <option value="service">Service / Assembly Fee</option>
             </Select>
           </Field>
         </div>
@@ -3180,11 +3188,12 @@ function CreateWODialog({ open, onClose }) {
   // Build bomLines from FG BOM with current part costs
   const bomLines = fg ? fg.bom.map(b => {
     const p = parts.find(pt => pt.id === b.partId);
-    return { partId: b.partId, partName: p?.name || b.partId, qty: b.qty * (parseInt(qty)||1), unitCost: p ? p.unitCost + p.freightCost : 0 };
+    return { partId: b.partId, partName: p?.name || b.partId, partType: p?.type || 'component', qty: b.qty * (parseInt(qty)||1), unitCost: p ? (p.type === 'service' ? p.unitCost : p.unitCost + p.freightCost) : 0 };
   }) : [];
 
-  const componentCost = bomLines.reduce((s,l) => s + l.qty * l.unitCost, 0);
-  const totalCost = componentCost + (parseFloat(assemblyFee)||0);
+  const componentCost = bomLines.filter(l => l.partType !== 'service').reduce((s,l) => s + l.qty * l.unitCost, 0);
+  const serviceCost   = bomLines.filter(l => l.partType === 'service').reduce((s,l) => s + l.qty * l.unitCost, 0);
+  const totalCost = componentCost + serviceCost;
 
   const submit = () => {
     if (!sku || !qty || !dateOrdered) return;
@@ -3192,11 +3201,10 @@ function CreateWODialog({ open, onClose }) {
     addWorkOrder({
       woNumber: woNum, sku, fgName: fg?.name || sku,
       qtyOrdered: parseInt(qty), status: 'draft',
-      dateOrdered, assemblyFee: parseFloat(assemblyFee)||0,
-      bomLines, memo,
+      dateOrdered, bomLines, memo,
     });
     toast.success(`${woNum} created`);
-    onClose(); setSku(finishedGoods[0]?.sku||''); setQty(''); setDateOrdered(''); setAssemblyFee(''); setMemo('');
+    onClose(); setSku(finishedGoods[0]?.sku||''); setQty(''); setDateOrdered(''); setMemo('');
   };
 
   return (
@@ -3210,24 +3218,32 @@ function CreateWODialog({ open, onClose }) {
           </Field>
           <Field label="Qty to Produce"><Input type="number" min="1" value={qty} onChange={e=>setQty(e.target.value)} placeholder="e.g. 200" /></Field>
           <Field label="Date Ordered"><Input type="date" value={dateOrdered} onChange={e=>setDateOrdered(e.target.value)} /></Field>
-          <Field label="Assembly Fee ($)"><Input type="number" step="0.01" min="0" value={assemblyFee} onChange={e=>setAssemblyFee(e.target.value)} placeholder="e.g. 1400.00" /></Field>
         </div>
         <Field label="Memo"><Input value={memo} onChange={e=>setMemo(e.target.value)} placeholder="Optional note" /></Field>
 
         {bomLines.length > 0 && (
           <div style={{ background:'hsl(220,15%,97%)', borderRadius:8, padding:'10px 14px' }}>
-            <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,56%)', marginBottom:8 }}>BOM Preview — {parseInt(qty)||0} units</div>
+            <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,56%)', marginBottom:8 }}>BOM — {parseInt(qty)||0} units</div>
             {bomLines.map((l,i) => (
-              <div key={i} style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'3px 0', borderBottom: i < bomLines.length-1 ? '1px solid hsl(220,15%,91%)' : 'none' }}>
-                <span>{l.partName}</span>
+              <div key={i} style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'3px 0', borderBottom: i < bomLines.length-1 ? '1px solid hsl(220,15%,91%)' : 'none',
+                color: l.partType === 'service' ? 'hsl(38,70%,35%)' : 'inherit' }}>
+                <span style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  {l.partType === 'service' && <span style={{ fontSize:10, fontWeight:700, background:'hsl(38,80%,92%)', color:'hsl(38,70%,35%)', borderRadius:3, padding:'1px 5px' }}>SVC</span>}
+                  {l.partName}
+                </span>
                 <span className="mono">{l.qty} × {fmt(l.unitCost)} = <strong>{fmt(l.qty * l.unitCost)}</strong></span>
               </div>
             ))}
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginTop:8, paddingTop:8, borderTop:'2px solid hsl(220,15%,88%)', fontWeight:700 }}>
-              <span>Assembly Fee</span><span className="mono">{fmt(parseFloat(assemblyFee)||0)}</span>
-            </div>
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginTop:4, fontWeight:700, color:'hsl(220,70%,45%)' }}>
-              <span>Total WO Cost</span><span className="mono">{fmt(totalCost)}</span>
+            <div style={{ borderTop:'2px solid hsl(220,15%,88%)', marginTop:8, paddingTop:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}>
+                <span style={{ color:'hsl(220,10%,56%)' }}>Components</span><span className="mono">{fmt(componentCost)}</span>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'hsl(38,70%,35%)' }}>
+                <span>Assembly (SVC) — posts on bill</span><span className="mono">{fmt(serviceCost)}</span>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)', marginTop:4 }}>
+                <span>Total WO Cost</span><span className="mono">{fmt(totalCost)}</span>
+              </div>
             </div>
           </div>
         )}
@@ -3264,8 +3280,9 @@ function WODetail({ wo, open, onClose }) {
 
   if (!wo) return null;
 
-  const componentCost = wo.bomLines.reduce((s,l) => s + l.qty * l.unitCost, 0);
-  const totalWIPCost  = componentCost + (parseFloat(assemblyFee)||wo.assemblyFee||0);
+  const componentCost = wo.bomLines.filter(l => l.partType !== 'service').reduce((s,l) => s + l.qty * l.unitCost, 0);
+  const serviceCost   = wo.bomLines.filter(l => l.partType === 'service').reduce((s,l) => s + l.qty * l.unitCost, 0);
+  const totalWIPCost  = componentCost + serviceCost;
   const unitCost      = wo.qtyOrdered > 0 ? totalWIPCost / wo.qtyOrdered : 0;
 
   const handleRelease = () => {
@@ -3277,18 +3294,17 @@ function WODetail({ wo, open, onClose }) {
   };
 
   const handleAssemblyInvoice = () => {
-    if (!assemblyFee || !dateAssemblyInvoice) { toast.error('Enter assembly fee and invoice date'); return; }
-    const fee = parseFloat(assemblyFee);
-    const updated = { status:'assembly-invoiced', assemblyFee: fee, dateAssemblyInvoice, assemblyInvoiceUrl };
+    if (!dateAssemblyInvoice) { toast.error('Enter the invoice date'); return; }
+    if (serviceCost <= 0) { toast.error('No service lines on BOM to invoice'); return; }
+    const updated = { status:'assembly-invoiced', dateAssemblyInvoice, assemblyInvoiceUrl };
     updateWorkOrder(wo.id, updated);
     postWOAssemblyInvoice({ ...wo, ...updated });
-    toast.success(`Assembly invoice posted — ${fmt(fee)} to AP`);
+    toast.success(`Assembly invoice posted — ${fmt(serviceCost)} to AP`);
     onClose();
   };
 
   const handleComplete = () => {
-    const fee = parseFloat(assemblyFee)||wo.assemblyFee||0;
-    const updated = { status:'completed', dateCompleted, assemblyFee: fee };
+    const updated = { status:'completed', dateCompleted };
     updateWorkOrder(wo.id, updated);
     postWOCompletedEntry({ ...wo, ...updated });
     toast.success(`${wo.woNumber} completed — ${wo.qtyOrdered} units moved to FG Inventory`);
@@ -3375,12 +3391,13 @@ function WODetail({ wo, open, onClose }) {
           <div>
             <table>
               <thead><tr style={{ background:'hsl(220,15%,96%)' }}>
-                <TH>Part</TH><TH right>Qty</TH><TH right>Unit Cost</TH><TH right>Extended</TH>
+                <TH>Part</TH><TH>Type</TH><TH right>Qty</TH><TH right>Unit Cost</TH><TH right>Extended</TH>
               </tr></thead>
               <tbody>
                 {wo.bomLines.map((l,i) => (
-                  <tr key={i}>
+                  <tr key={i} style={{ background: l.partType === 'service' ? 'hsl(38,80%,98%)' : 'white' }}>
                     <TD>{l.partName}</TD>
+                    <TD><Badge cls={l.partType === 'service' ? 'badge-yellow' : 'badge-muted'}>{l.partType === 'service' ? 'Service' : l.partType}</Badge></TD>
                     <TD right mono>{l.qty}</TD>
                     <TD right mono>{fmt(l.unitCost)}</TD>
                     <TD right mono bold>{fmt(l.qty * l.unitCost)}</TD>
@@ -3389,15 +3406,15 @@ function WODetail({ wo, open, onClose }) {
               </tbody>
               <tfoot>
                 <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
-                  <td colSpan={3} style={{ padding:'10px 14px', fontSize:13 }}>Component Cost</td>
+                  <td colSpan={4} style={{ padding:'10px 14px', fontSize:13 }}>Physical Components</td>
                   <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(componentCost)}</td>
                 </tr>
-                <tr style={{ background:'hsl(220,70%,97%)', fontWeight:700 }}>
-                  <td colSpan={3} style={{ padding:'10px 14px', fontSize:13, color:'hsl(220,70%,45%)' }}>+ Assembly Fee</td>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(220,70%,45%)' }}>{fmt(parseFloat(assemblyFee)||wo.assemblyFee||0)}</td>
+                <tr style={{ background:'hsl(38,80%,97%)', fontWeight:700 }}>
+                  <td colSpan={4} style={{ padding:'10px 14px', fontSize:13, color:'hsl(38,60%,35%)' }}>Assembly / Service (posts on bill)</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(38,60%,35%)' }}>{fmt(serviceCost)}</td>
                 </tr>
                 <tr style={{ background:'hsl(220,70%,92%)', fontWeight:700 }}>
-                  <td colSpan={3} style={{ padding:'10px 14px', fontSize:13 }}>Total WO Cost ({wo.qtyOrdered} units)</td>
+                  <td colSpan={4} style={{ padding:'10px 14px', fontSize:13 }}>Total WO Cost ({wo.qtyOrdered} units @ {fmt(unitCost)}/unit)</td>
                   <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(totalWIPCost)}</td>
                 </tr>
               </tfoot>
@@ -3408,17 +3425,22 @@ function WODetail({ wo, open, onClose }) {
         {tab === 'assembly' && (
           <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
             <div style={{ background:'hsl(38,80%,97%)', border:'1px solid hsl(38,80%,82%)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'hsl(38,50%,35%)' }}>
-              Record the factory's assembly invoice here. Posting will debit WIP and credit AP.
+              Record the factory's assembly invoice. Posts <strong>{fmt(serviceCost)}</strong> to WIP DR / AP CR.
+            </div>
+            <div style={{ background:'hsl(220,15%,97%)', borderRadius:7, padding:'10px 14px' }}>
+              {wo.bomLines.filter(l => l.partType === 'service').map((l,i) => (
+                <div key={i} style={{ display:'flex', justifyContent:'space-between', fontSize:13, padding:'4px 0' }}>
+                  <span style={{ fontWeight:500 }}>{l.partName}</span>
+                  <span className="mono">{l.qty} × {fmt(l.unitCost)} = <strong>{fmt(l.qty * l.unitCost)}</strong></span>
+                </div>
+              ))}
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              <Field label="Assembly Fee ($)">
-                <Input type="number" step="0.01" min="0" value={assemblyFee} onChange={e=>setAssemblyFee(e.target.value)} className="mono" disabled={wo.status==='completed'} />
-              </Field>
               <Field label="Invoice Date">
                 <Input type="date" value={dateAssemblyInvoice} onChange={e=>setDateAI(e.target.value)} disabled={wo.status==='completed'} />
               </Field>
             </div>
-            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            <div style={{ display:'flex', gap:8, alignItems:'flex-end' }}>
               <div style={{ flex:1 }}>
                 <Field label="Invoice PDF (Google Drive link)">
                   <Input value={assemblyInvoiceUrl} onChange={e=>setAIUrl(e.target.value)} placeholder="Paste Google Drive link…" disabled={wo.status==='completed'} />
@@ -3426,7 +3448,7 @@ function WODetail({ wo, open, onClose }) {
               </div>
               {assemblyInvoiceUrl && (
                 <a href={assemblyInvoiceUrl} target="_blank" rel="noopener noreferrer"
-                  style={{ marginTop:18, display:'flex', alignItems:'center', gap:5, fontSize:12, fontWeight:600,
+                  style={{ marginBottom:1, display:'flex', alignItems:'center', gap:5, fontSize:12, fontWeight:600,
                     color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)',
                     borderRadius:6, padding:'7px 12px', textDecoration:'none', whiteSpace:'nowrap' }}>
                   📄 Open ↗
@@ -3570,9 +3592,10 @@ function WorkOrdersPage() {
 
 // ── Bills Page ────────────────────────────────────────────────────────────────
 function BillsPage() {
-  const { bills, updateBill, deleteBill, purchaseOrders, suppliers, getSupplierById } = useData();
+  const { bills, updateBill, deleteBill, purchaseOrders, suppliers, getSupplierById, finishedGoods, parts, workOrders, addWorkOrder } = useData();
   const [selected, setSelected] = useState(null);
   const [f, setF] = useState({});
+  const [woFromBill, setWoFromBill] = useState(null); // bill to pre-fill WO from
   const fld = k => ({ value: f[k]??'', onChange: e => setF(p=>({...p,[k]:e.target.value})) });
 
   const openBill = (bill) => { setSelected(bill); setF({...bill}); };
@@ -3757,6 +3780,12 @@ function BillsPage() {
               <button onClick={handleDelete} style={{ fontSize:12, color:'hsl(0,72%,51%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>Delete bill</button>
               <div style={{ display:'flex', gap:8 }}>
                 <Btn variant="ghost" onClick={closeBill}>Cancel</Btn>
+                {(() => {
+                  const linkedWO = workOrders.find(w => w.billId === selected?.id);
+                  return linkedWO
+                    ? <span style={{ fontSize:12, color:'hsl(160,60%,35%)', fontWeight:500, display:'flex', alignItems:'center' }}>✓ WO: {linkedWO.woNumber}</span>
+                    : <Btn variant="outline" onClick={() => { setWoFromBill(selected); closeBill(); }}>Create WO</Btn>;
+                })()}
                 <Btn variant="outline" onClick={() => { setF(p=>({...p,status:'paid',amountPaid:selected.amount})); }}>Mark Paid</Btn>
                 <Btn onClick={save}>Save Changes</Btn>
               </div>
@@ -3764,7 +3793,91 @@ function BillsPage() {
           </div>
         )}
       </Modal>
+
+      {/* Create WO from Bill dialog */}
+      <CreateWOFromBillDialog bill={woFromBill} onClose={() => setWoFromBill(null)} />
     </div>
+  );
+}
+
+function CreateWOFromBillDialog({ bill, onClose }) {
+  const { finishedGoods, parts, addWorkOrder, updateBill } = useData();
+  const [sku, setSku]             = useState('');
+  const [qty, setQty]             = useState('');
+  const [dateOrdered, setDate]    = useState('');
+  const [memo, setMemo]           = useState('');
+
+  useEffect(() => {
+    if (bill) {
+      setDate(bill.dateCreated || today());
+      setMemo(`WO from bill ${bill.poNumber}`);
+      setSku(finishedGoods[0]?.sku || '');
+    }
+  }, [bill, finishedGoods]);
+
+  if (!bill) return null;
+  const fg = finishedGoods.find(f => f.sku === sku);
+  const bomLines = fg ? fg.bom.map(b => {
+    const p = parts.find(pt => pt.id === b.partId);
+    return { partId: b.partId, partName: p?.name || b.partId, partType: p?.type || 'component', qty: b.qty * (parseInt(qty)||1), unitCost: p ? (p.type === 'service' ? p.unitCost : p.unitCost + p.freightCost) : 0 };
+  }) : [];
+  const componentCost = bomLines.filter(l => l.partType !== 'service').reduce((s,l) => s + l.qty * l.unitCost, 0);
+  const serviceCost   = bomLines.filter(l => l.partType === 'service').reduce((s,l) => s + l.qty * l.unitCost, 0);
+
+  const submit = () => {
+    if (!sku || !qty || !dateOrdered) return;
+    const woNum = `WO-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+    const newWO = { woNumber: woNum, sku, fgName: fg?.name || sku, qtyOrdered: parseInt(qty), status: 'assembly-invoiced', dateOrdered, dateAssemblyInvoice: bill.dateCreated || today(), bomLines, memo, billId: bill.id };
+    addWorkOrder(newWO);
+    updateBill(bill.id, { linkedWONumber: woNum });
+    toast.success(`${woNum} created from bill — status set to Assembly Invoiced`);
+    onClose();
+  };
+
+  return (
+    <Modal title={`Create WO from Bill`} open={!!bill} onClose={onClose} wide>
+      <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ background:'hsl(220,70%,97%)', border:'1px solid hsl(220,70%,88%)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'hsl(220,40%,40%)' }}>
+          Bill from <strong>{bill.poNumber}</strong> · {fmt(bill.amount)} · WO will be created with status <strong>Assembly Invoiced</strong> since the factory invoice already exists.
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          <Field label="Finished Good SKU">
+            <Select value={sku} onChange={setSku}>
+              {finishedGoods.map(fg => <option key={fg.sku} value={fg.sku}>{fg.sku} — {fg.name}</option>)}
+            </Select>
+          </Field>
+          <Field label="Qty Produced"><Input type="number" min="1" value={qty} onChange={e=>setQty(e.target.value)} placeholder="e.g. 200" /></Field>
+          <Field label="Date Ordered"><Input type="date" value={dateOrdered} onChange={e=>setDate(e.target.value)} /></Field>
+        </div>
+        <Field label="Memo"><Input value={memo} onChange={e=>setMemo(e.target.value)} /></Field>
+
+        {bomLines.length > 0 && qty > 0 && (
+          <div style={{ background:'hsl(220,15%,97%)', borderRadius:8, padding:'10px 14px' }}>
+            <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,56%)', marginBottom:8 }}>BOM — {qty} units</div>
+            {bomLines.map((l,i) => (
+              <div key={i} style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'3px 0', borderBottom: i < bomLines.length-1 ? '1px solid hsl(220,15%,91%)' : 'none',
+                color: l.partType === 'service' ? 'hsl(38,70%,35%)' : 'inherit' }}>
+                <span style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  {l.partType === 'service' && <span style={{ fontSize:10, fontWeight:700, background:'hsl(38,80%,92%)', color:'hsl(38,70%,35%)', borderRadius:3, padding:'1px 5px' }}>SVC</span>}
+                  {l.partName}
+                </span>
+                <span className="mono">{l.qty} × {fmt(l.unitCost)} = <strong>{fmt(l.qty * l.unitCost)}</strong></span>
+              </div>
+            ))}
+            <div style={{ borderTop:'2px solid hsl(220,15%,88%)', marginTop:8, paddingTop:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}><span style={{ color:'hsl(220,10%,56%)' }}>Components</span><span className="mono">{fmt(componentCost)}</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'hsl(38,70%,35%)' }}><span>Assembly (SVC)</span><span className="mono">{fmt(serviceCost)}</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)', marginTop:4 }}><span>Total WO Cost</span><span className="mono">{fmt(componentCost + serviceCost)}</span></div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid hsl(220,15%,90%)', paddingTop:14 }}>
+          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+          <Btn onClick={submit} disabled={!sku||!qty||!dateOrdered}>Create Work Order</Btn>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -3886,6 +3999,14 @@ const navItems = [
 export default function App() {
   const [page, setPage] = useState('dashboard');
   const [collapsed, setCollapsed] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
+
+  const handleReset = () => {
+    if (!confirm('Reset all data to seed? This cannot be undone.')) return;
+    try { localStorage.removeItem(STORE_KEY); } catch {}
+    setResetKey(k => k + 1);
+    setPage('dashboard');
+  };
   const [supplierFilter, setSupplierFilter] = useState(null);
   const [searchPO, setSearchPO]   = useState(null);
   const [searchFGO, setSearchFGO] = useState(null);
@@ -3911,7 +4032,7 @@ export default function App() {
     : <Dashboard setPage={setPage} />;
 
   return (
-    <DataProvider>
+    <DataProvider key={resetKey}>
       <ToastProvider>
         <style>{css}</style>
         <div style={{ display:'flex', minHeight:'100vh', background:'hsl(220,20%,97%)' }}>
@@ -3953,6 +4074,14 @@ export default function App() {
                 </button>
               ))}
             </div>
+
+            {!collapsed && (
+              <button onClick={handleReset}
+                style={{ margin:'0 8px 6px', padding:'7px 10px', border:'1px solid hsl(220,20%,22%)', background:'transparent',
+                  borderRadius:6, color:'hsl(220,15%,45%)', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textAlign:'center' }}>
+                ↺ Reset to Seed Data
+              </button>
+            )}
 
             <button onClick={() => setCollapsed(c => !c)} style={{
               padding:'12px 0', border:'none', background:'transparent', color:'hsl(220,15%,40%)',

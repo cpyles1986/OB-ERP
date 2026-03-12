@@ -72,6 +72,7 @@ const initialAccounts = [
   { id:'acct-1300', number:'1300', name:'Inventory — Components',       type:'asset',     normal:'debit'  },
   { id:'acct-1310', number:'1310', name:'Inventory — Finished Goods',   type:'asset',     normal:'debit'  },
   { id:'acct-1320', number:'1320', name:'Inventory — In Transit',       type:'asset',     normal:'debit'  },
+  { id:'acct-1330', number:'1330', name:'Work In Process (WIP)',           type:'asset',     normal:'debit'  },
   { id:'acct-1400', number:'1400', name:'Prepaid / Deposits Paid',      type:'asset',     normal:'debit'  },
   { id:'acct-2100', number:'2100', name:'Accounts Payable',             type:'liability', normal:'credit' },
   { id:'acct-3000', number:'3000', name:'Retained Earnings',            type:'equity',    normal:'credit' },
@@ -190,6 +191,7 @@ function DataProvider({ children }) {
   const [journal, setJournal]            = useState(saved?.journal            || initialJournal);
   const [activityLog, setActivityLog]    = useState(saved?.activityLog        || []);
   const [bills, setBills]                = useState(saved?.bills                || []);
+  const [workOrders, setWorkOrders]      = useState(saved?.workOrders          || []);
 
   // Seed the ID counter from whatever is in storage
   useEffect(() => {
@@ -198,8 +200,8 @@ function DataProvider({ children }) {
 
   // Persist on every change
   useEffect(() => {
-    saveStore({ suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders, accounts, journal, activityLog, bills });
-  }, [suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders, accounts, journal, activityLog, bills]);
+    saveStore({ suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders, accounts, journal, activityLog, bills, workOrders });
+  }, [suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders, accounts, journal, activityLog, bills, workOrders]);
 
   // ── Journal engine ──────────────────────────────────────────────────────────
   const postEntry = useCallback((entry) => {
@@ -290,6 +292,9 @@ function DataProvider({ children }) {
   const addPurchaseOrder    = useCallback(po => setPOs(p       => [...p, { ...po, id: nid('po')   }]), []);
   const addFinishedGoodOrder = useCallback(fgo => setFGOs(p   => [...p, { ...fgo, id: nid('fgo')  }]), []);
   const addBill             = useCallback(bill => setBills(p  => [...p, { ...bill, id: nid('bill') }]), []);
+  const addWorkOrder        = useCallback(wo => setWorkOrders(p => [...p, { ...wo, id: nid('wo') }]), []);
+  const updateWorkOrder     = useCallback((woId, updates) => setWorkOrders(p => p.map(w => w.id === woId ? { ...w, ...updates } : w)), []);
+  const deleteWorkOrder     = useCallback((woId) => setWorkOrders(p => p.filter(w => w.id !== woId)), []);
   const updateBill          = useCallback((billId, updates) => setBills(p => p.map(b => b.id === billId ? { ...b, ...updates } : b)), []);
   const deleteBill          = useCallback((billId) => setBills(p => p.filter(b => b.id !== billId)), []);
   const deleteFinishedGoodOrder = useCallback(fgoId => setFGOs(p => p.filter(o => o.id !== fgoId)), []);
@@ -361,11 +366,36 @@ function DataProvider({ children }) {
     };
   }, []);
 
+  const postWOReleasedEntry = useCallback((wo) => {
+    const componentCost = wo.bomLines.reduce((s, l) => s + l.qty * l.unitCost, 0);
+    postEntry({ date: wo.dateReleased || today(), memo: `${wo.woNumber} — components consumed into WIP`, source:'wo', sourceId: wo.id, lines:[
+      { accountId:'acct-1330', debit: componentCost, credit: 0 },
+      { accountId:'acct-1300', debit: 0, credit: componentCost },
+    ]});
+  }, [postEntry]);
+
+  const postWOAssemblyInvoice = useCallback((wo) => {
+    postEntry({ date: wo.dateAssemblyInvoice || today(), memo: `${wo.woNumber} — assembly fee invoiced`, source:'wo', sourceId: wo.id, lines:[
+      { accountId:'acct-1330', debit: wo.assemblyFee, credit: 0 },
+      { accountId:'acct-2100', debit: 0, credit: wo.assemblyFee },
+    ]});
+  }, [postEntry]);
+
+  const postWOCompletedEntry = useCallback((wo) => {
+    const totalWIP = wo.bomLines.reduce((s, l) => s + l.qty * l.unitCost, 0) + (wo.assemblyFee || 0);
+    postEntry({ date: wo.dateCompleted || today(), memo: `${wo.woNumber} — ${wo.qtyOrdered} units ${wo.sku} completed into FG inventory`, source:'wo', sourceId: wo.id, lines:[
+      { accountId:'acct-1310', debit: totalWIP, credit: 0 },
+      { accountId:'acct-1330', debit: 0, credit: totalWIP },
+    ]});
+  }, [postEntry]);
+
   return (
     <DataContext.Provider value={{
       suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, finishedGoodOrders,
       addSupplier, addPart, addFinishedGood, addPurchaseOrder, addFinishedGoodOrder, deleteFinishedGoodOrder, updatePurchaseOrder,
       bills, addBill, updateBill, deleteBill,
+      workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder,
+      postWOReleasedEntry, postWOAssemblyInvoice, postWOCompletedEntry,
       updateBOM, updatePart, deletePart, updateSupplier, deleteSupplier, updateFinishedGood, deleteFinishedGood, updateFinishedGoodOrder, getPartById, getSupplierById,
       addInventoryRecord, updateInventoryRecord, deleteInventoryRecord,
       accounts, journal, addAccount, postEntry, reverseEntry, postSalesSummary,
@@ -3132,6 +3162,412 @@ function ActivityLogPage() {
   );
 }
 
+// ── Work Orders Page ──────────────────────────────────────────────────────────
+const WO_STATUSES = ['draft','released','assembly-invoiced','completed','cancelled'];
+const woStatusCls = { draft:'badge-muted', released:'badge-primary', 'assembly-invoiced':'badge-yellow', completed:'badge-green', cancelled:'badge-muted' };
+const woStatusLabel = { draft:'Draft', released:'Released', 'assembly-invoiced':'Assembly Invoiced', completed:'Completed', cancelled:'Cancelled' };
+
+function CreateWODialog({ open, onClose }) {
+  const { finishedGoods, parts, addWorkOrder } = useData();
+  const [sku, setSku]               = useState(finishedGoods[0]?.sku || '');
+  const [qty, setQty]               = useState('');
+  const [dateOrdered, setDateOrdered] = useState('');
+  const [assemblyFee, setAssemblyFee] = useState('');
+  const [memo, setMemo]             = useState('');
+
+  const fg = finishedGoods.find(f => f.sku === sku);
+
+  // Build bomLines from FG BOM with current part costs
+  const bomLines = fg ? fg.bom.map(b => {
+    const p = parts.find(pt => pt.id === b.partId);
+    return { partId: b.partId, partName: p?.name || b.partId, qty: b.qty * (parseInt(qty)||1), unitCost: p ? p.unitCost + p.freightCost : 0 };
+  }) : [];
+
+  const componentCost = bomLines.reduce((s,l) => s + l.qty * l.unitCost, 0);
+  const totalCost = componentCost + (parseFloat(assemblyFee)||0);
+
+  const submit = () => {
+    if (!sku || !qty || !dateOrdered) return;
+    const woNum = `WO-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+    addWorkOrder({
+      woNumber: woNum, sku, fgName: fg?.name || sku,
+      qtyOrdered: parseInt(qty), status: 'draft',
+      dateOrdered, assemblyFee: parseFloat(assemblyFee)||0,
+      bomLines, memo,
+    });
+    toast.success(`${woNum} created`);
+    onClose(); setSku(finishedGoods[0]?.sku||''); setQty(''); setDateOrdered(''); setAssemblyFee(''); setMemo('');
+  };
+
+  return (
+    <Modal title="New Work Order" open={open} onClose={onClose}>
+      <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          <Field label="Finished Good SKU">
+            <Select value={sku} onChange={setSku}>
+              {finishedGoods.map(fg => <option key={fg.sku} value={fg.sku}>{fg.sku} — {fg.name}</option>)}
+            </Select>
+          </Field>
+          <Field label="Qty to Produce"><Input type="number" min="1" value={qty} onChange={e=>setQty(e.target.value)} placeholder="e.g. 200" /></Field>
+          <Field label="Date Ordered"><Input type="date" value={dateOrdered} onChange={e=>setDateOrdered(e.target.value)} /></Field>
+          <Field label="Assembly Fee ($)"><Input type="number" step="0.01" min="0" value={assemblyFee} onChange={e=>setAssemblyFee(e.target.value)} placeholder="e.g. 1400.00" /></Field>
+        </div>
+        <Field label="Memo"><Input value={memo} onChange={e=>setMemo(e.target.value)} placeholder="Optional note" /></Field>
+
+        {bomLines.length > 0 && (
+          <div style={{ background:'hsl(220,15%,97%)', borderRadius:8, padding:'10px 14px' }}>
+            <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,56%)', marginBottom:8 }}>BOM Preview — {parseInt(qty)||0} units</div>
+            {bomLines.map((l,i) => (
+              <div key={i} style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'3px 0', borderBottom: i < bomLines.length-1 ? '1px solid hsl(220,15%,91%)' : 'none' }}>
+                <span>{l.partName}</span>
+                <span className="mono">{l.qty} × {fmt(l.unitCost)} = <strong>{fmt(l.qty * l.unitCost)}</strong></span>
+              </div>
+            ))}
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginTop:8, paddingTop:8, borderTop:'2px solid hsl(220,15%,88%)', fontWeight:700 }}>
+              <span>Assembly Fee</span><span className="mono">{fmt(parseFloat(assemblyFee)||0)}</span>
+            </div>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginTop:4, fontWeight:700, color:'hsl(220,70%,45%)' }}>
+              <span>Total WO Cost</span><span className="mono">{fmt(totalCost)}</span>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid hsl(220,15%,90%)', paddingTop:14 }}>
+          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+          <Btn onClick={submit} disabled={!sku||!qty||!dateOrdered}>Create Work Order</Btn>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function WODetail({ wo, open, onClose }) {
+  const { updateWorkOrder, deleteWorkOrder, postWOReleasedEntry, postWOAssemblyInvoice, postWOCompletedEntry, parts } = useData();
+  const [tab, setTab]                     = useState('detail');
+  const [assemblyFee, setAssemblyFee]     = useState('');
+  const [dateAssemblyInvoice, setDateAI]  = useState('');
+  const [assemblyInvoiceUrl, setAIUrl]    = useState('');
+  const [dateCompleted, setDateCompleted] = useState('');
+  const [dateReleased, setDateReleased]   = useState('');
+  const [confirmRelease, setConfirmRelease] = useState(false);
+  const [confirmComplete, setConfirmComplete] = useState(false);
+
+  useEffect(() => {
+    if (wo) {
+      setAssemblyFee(wo.assemblyFee || '');
+      setDateAI(wo.dateAssemblyInvoice || '');
+      setAIUrl(wo.assemblyInvoiceUrl || '');
+      setDateCompleted(wo.dateCompleted || '');
+      setDateReleased(wo.dateReleased || today());
+    }
+  }, [wo]);
+
+  if (!wo) return null;
+
+  const componentCost = wo.bomLines.reduce((s,l) => s + l.qty * l.unitCost, 0);
+  const totalWIPCost  = componentCost + (parseFloat(assemblyFee)||wo.assemblyFee||0);
+  const unitCost      = wo.qtyOrdered > 0 ? totalWIPCost / wo.qtyOrdered : 0;
+
+  const handleRelease = () => {
+    const updated = { status:'released', dateReleased };
+    updateWorkOrder(wo.id, updated);
+    postWOReleasedEntry({ ...wo, ...updated });
+    toast.success(`${wo.woNumber} released — components moved to WIP`);
+    setConfirmRelease(false); onClose();
+  };
+
+  const handleAssemblyInvoice = () => {
+    if (!assemblyFee || !dateAssemblyInvoice) { toast.error('Enter assembly fee and invoice date'); return; }
+    const fee = parseFloat(assemblyFee);
+    const updated = { status:'assembly-invoiced', assemblyFee: fee, dateAssemblyInvoice, assemblyInvoiceUrl };
+    updateWorkOrder(wo.id, updated);
+    postWOAssemblyInvoice({ ...wo, ...updated });
+    toast.success(`Assembly invoice posted — ${fmt(fee)} to AP`);
+    onClose();
+  };
+
+  const handleComplete = () => {
+    const fee = parseFloat(assemblyFee)||wo.assemblyFee||0;
+    const updated = { status:'completed', dateCompleted, assemblyFee: fee };
+    updateWorkOrder(wo.id, updated);
+    postWOCompletedEntry({ ...wo, ...updated });
+    toast.success(`${wo.woNumber} completed — ${wo.qtyOrdered} units moved to FG Inventory`);
+    setConfirmComplete(false); onClose();
+  };
+
+  const handleDelete = () => {
+    if (!confirm('Delete this work order?')) return;
+    deleteWorkOrder(wo.id); toast.success('Work order deleted'); onClose();
+  };
+
+  const TabBtn = ({ id, label }) => (
+    <button onClick={() => setTab(id)} style={{
+      padding:'6px 14px', fontSize:12, fontWeight:600, border:'none', borderRadius:5, cursor:'pointer',
+      background: tab===id ? 'hsl(220,70%,45%)' : 'transparent',
+      color: tab===id ? 'white' : 'hsl(220,10%,56%)',
+    }}>{label}</button>
+  );
+
+  return (
+    <>
+    <Modal title={wo.woNumber} open={open} onClose={onClose} wide>
+      <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+
+        {/* Status strip */}
+        <div style={{ display:'flex', gap:12, alignItems:'center', background:'hsl(220,15%,97%)', borderRadius:8, padding:'12px 16px' }}>
+          <Badge cls={woStatusCls[wo.status]}>{woStatusLabel[wo.status]}</Badge>
+          <div style={{ fontSize:13 }}><span style={{ color:'hsl(220,10%,56%)' }}>SKU: </span><span className="mono" style={{ fontWeight:600 }}>{wo.sku}</span></div>
+          <div style={{ fontSize:13 }}><span style={{ color:'hsl(220,10%,56%)' }}>Qty: </span><strong>{wo.qtyOrdered}</strong></div>
+          <div style={{ marginLeft:'auto', textAlign:'right' }}>
+            <div style={{ fontSize:11, color:'hsl(220,10%,56%)', textTransform:'uppercase', letterSpacing:0.5 }}>Total WO Cost</div>
+            <div className="mono" style={{ fontSize:18, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(totalWIPCost)}</div>
+            <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{fmt(unitCost)} / unit</div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display:'flex', gap:4, background:'hsl(220,15%,95%)', borderRadius:7, padding:4 }}>
+          <TabBtn id="detail" label="Detail" />
+          <TabBtn id="bom" label="BOM" />
+          <TabBtn id="assembly" label="Assembly Invoice" />
+        </div>
+
+        {tab === 'detail' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+              <div style={{ background:'hsl(220,15%,97%)', borderRadius:7, padding:10 }}>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Date Ordered</div>
+                <div style={{ fontSize:13, marginTop:3 }}>{wo.dateOrdered}</div>
+              </div>
+              <div style={{ background:'hsl(220,15%,97%)', borderRadius:7, padding:10 }}>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Date Released</div>
+                <div style={{ fontSize:13, marginTop:3 }}>{wo.dateReleased || '—'}</div>
+              </div>
+              <div style={{ background:'hsl(220,15%,97%)', borderRadius:7, padding:10 }}>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Date Completed</div>
+                <div style={{ fontSize:13, marginTop:3 }}>{wo.dateCompleted || '—'}</div>
+              </div>
+            </div>
+            {wo.memo && <div style={{ fontSize:13, color:'hsl(220,10%,56%)', fontStyle:'italic' }}>{wo.memo}</div>}
+
+            {/* Journal flow visualization */}
+            <div style={{ background:'hsl(220,70%,97%)', border:'1px solid hsl(220,70%,88%)', borderRadius:8, padding:'12px 16px' }}>
+              <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,70%,45%)', marginBottom:10 }}>Journal Flow</div>
+              {[
+                { step:'1', label:'On Release', entry:'Components DR→CR  /  WIP DR', done: wo.status !== 'draft', amt: fmt(componentCost) },
+                { step:'2', label:'Assembly Invoice', entry:'Assembly Fee DR  /  AP CR', done: ['assembly-invoiced','completed'].includes(wo.status), amt: fmt(wo.assemblyFee||0) },
+                { step:'3', label:'On Completion', entry:'WIP CR  /  FG Inventory DR', done: wo.status === 'completed', amt: fmt(totalWIPCost) },
+              ].map((s,i) => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'6px 0', borderBottom: i < 2 ? '1px solid hsl(220,70%,90%)' : 'none' }}>
+                  <div style={{ width:22, height:22, borderRadius:'50%', background: s.done ? 'hsl(160,60%,40%)' : 'hsl(220,15%,80%)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'white', flexShrink:0 }}>{s.done ? '✓' : s.step}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:600 }}>{s.label}</div>
+                    <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{s.entry}</div>
+                  </div>
+                  <div className="mono" style={{ fontSize:12, fontWeight:600 }}>{s.amt}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === 'bom' && (
+          <div>
+            <table>
+              <thead><tr style={{ background:'hsl(220,15%,96%)' }}>
+                <TH>Part</TH><TH right>Qty</TH><TH right>Unit Cost</TH><TH right>Extended</TH>
+              </tr></thead>
+              <tbody>
+                {wo.bomLines.map((l,i) => (
+                  <tr key={i}>
+                    <TD>{l.partName}</TD>
+                    <TD right mono>{l.qty}</TD>
+                    <TD right mono>{fmt(l.unitCost)}</TD>
+                    <TD right mono bold>{fmt(l.qty * l.unitCost)}</TD>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
+                  <td colSpan={3} style={{ padding:'10px 14px', fontSize:13 }}>Component Cost</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(componentCost)}</td>
+                </tr>
+                <tr style={{ background:'hsl(220,70%,97%)', fontWeight:700 }}>
+                  <td colSpan={3} style={{ padding:'10px 14px', fontSize:13, color:'hsl(220,70%,45%)' }}>+ Assembly Fee</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(220,70%,45%)' }}>{fmt(parseFloat(assemblyFee)||wo.assemblyFee||0)}</td>
+                </tr>
+                <tr style={{ background:'hsl(220,70%,92%)', fontWeight:700 }}>
+                  <td colSpan={3} style={{ padding:'10px 14px', fontSize:13 }}>Total WO Cost ({wo.qtyOrdered} units)</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(totalWIPCost)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+
+        {tab === 'assembly' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div style={{ background:'hsl(38,80%,97%)', border:'1px solid hsl(38,80%,82%)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'hsl(38,50%,35%)' }}>
+              Record the factory's assembly invoice here. Posting will debit WIP and credit AP.
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <Field label="Assembly Fee ($)">
+                <Input type="number" step="0.01" min="0" value={assemblyFee} onChange={e=>setAssemblyFee(e.target.value)} className="mono" disabled={wo.status==='completed'} />
+              </Field>
+              <Field label="Invoice Date">
+                <Input type="date" value={dateAssemblyInvoice} onChange={e=>setDateAI(e.target.value)} disabled={wo.status==='completed'} />
+              </Field>
+            </div>
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              <div style={{ flex:1 }}>
+                <Field label="Invoice PDF (Google Drive link)">
+                  <Input value={assemblyInvoiceUrl} onChange={e=>setAIUrl(e.target.value)} placeholder="Paste Google Drive link…" disabled={wo.status==='completed'} />
+                </Field>
+              </div>
+              {assemblyInvoiceUrl && (
+                <a href={assemblyInvoiceUrl} target="_blank" rel="noopener noreferrer"
+                  style={{ marginTop:18, display:'flex', alignItems:'center', gap:5, fontSize:12, fontWeight:600,
+                    color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)',
+                    borderRadius:6, padding:'7px 12px', textDecoration:'none', whiteSpace:'nowrap' }}>
+                  📄 Open ↗
+                </a>
+              )}
+            </div>
+            {wo.status === 'assembly-invoiced' && (
+              <div style={{ fontSize:12, color:'hsl(160,60%,35%)', fontWeight:600 }}>✓ Assembly invoice posted on {wo.dateAssemblyInvoice}</div>
+            )}
+          </div>
+        )}
+
+        {/* Action footer */}
+        <div style={{ borderTop:'1px solid hsl(220,15%,90%)', paddingTop:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <button onClick={handleDelete} style={{ fontSize:12, color:'hsl(0,72%,51%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>Delete</button>
+          <div style={{ display:'flex', gap:8 }}>
+            <Btn variant="ghost" onClick={onClose}>Close</Btn>
+            {wo.status === 'draft' && (
+              <Btn variant="outline" onClick={() => setConfirmRelease(true)}>Release WO</Btn>
+            )}
+            {wo.status === 'released' && tab === 'assembly' && (
+              <Btn variant="outline" onClick={handleAssemblyInvoice}>Post Assembly Invoice</Btn>
+            )}
+            {wo.status === 'assembly-invoiced' && (
+              <Btn onClick={() => setConfirmComplete(true)}>Complete WO</Btn>
+            )}
+          </div>
+        </div>
+      </div>
+    </Modal>
+
+    {/* Confirm Release */}
+    <Modal title="Confirm Release" open={confirmRelease} onClose={() => setConfirmRelease(false)}>
+      <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        <div style={{ fontSize:13, color:'hsl(220,10%,40%)' }}>
+          This will post a journal entry moving <strong>{fmt(componentCost)}</strong> from <strong>Inventory — Components</strong> into <strong>WIP</strong>.
+        </div>
+        <Field label="Release Date"><Input type="date" value={dateReleased} onChange={e=>setDateReleased(e.target.value)} /></Field>
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+          <Btn variant="ghost" onClick={() => setConfirmRelease(false)}>Cancel</Btn>
+          <Btn onClick={handleRelease}>Confirm Release</Btn>
+        </div>
+      </div>
+    </Modal>
+
+    {/* Confirm Complete */}
+    <Modal title="Confirm Completion" open={confirmComplete} onClose={() => setConfirmComplete(false)}>
+      <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        <div style={{ fontSize:13, color:'hsl(220,10%,40%)' }}>
+          This will post a journal entry moving <strong>{fmt(totalWIPCost)}</strong> from <strong>WIP</strong> into <strong>Inventory — Finished Goods</strong>.
+          <div style={{ marginTop:8 }}>Unit cost: <strong className="mono">{fmt(unitCost)}</strong> per unit × {wo.qtyOrdered} units</div>
+        </div>
+        <Field label="Completion Date"><Input type="date" value={dateCompleted} onChange={e=>setDateCompleted(e.target.value)} /></Field>
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+          <Btn variant="ghost" onClick={() => setConfirmComplete(false)}>Cancel</Btn>
+          <Btn onClick={handleComplete}>Confirm Completion</Btn>
+        </div>
+      </div>
+    </Modal>
+    </>
+  );
+}
+
+function WorkOrdersPage() {
+  const { workOrders, finishedGoods } = useData();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [selected, setSelected]     = useState(null);
+
+  const totalInWIP      = workOrders.filter(w => ['released','assembly-invoiced'].includes(w.status));
+  const wipValue        = totalInWIP.reduce((s,w) => s + w.bomLines.reduce((ss,l) => ss + l.qty * l.unitCost, 0) + (w.assemblyFee||0), 0);
+  const completed       = workOrders.filter(w => w.status === 'completed');
+  const completedUnits  = completed.reduce((s,w) => s + w.qtyOrdered, 0);
+
+  const statusOrder = ['draft','released','assembly-invoiced','completed','cancelled'];
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+        <div>
+          <div style={{ fontSize:22, fontWeight:700 }}>Work Orders</div>
+          <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>Track component → WIP → FG assembly runs · Click to manage</div>
+        </div>
+        <Btn onClick={() => setCreateOpen(true)}>+ New Work Order</Btn>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:16 }}>
+        <StatCard title="Active WOs" value={`${totalInWIP.length}`} icon={Icons.Layers} />
+        <StatCard title="WIP Value" value={fmt(wipValue)} icon={Icons.Dollar} variant="warning" />
+        <StatCard title="Completed" value={`${completed.length}`} icon={Icons.Truck} variant="success" />
+        <StatCard title="Units Produced" value={`${completedUnits}`} icon={Icons.Package} />
+      </div>
+
+      <Card>
+        <CardContent style={{ padding:0 }}>
+          {workOrders.length === 0 ? (
+            <div style={{ padding:'60px 20px', textAlign:'center', color:'hsl(220,10%,56%)' }}>
+              <div style={{ fontSize:32, marginBottom:12 }}>🏭</div>
+              <div style={{ fontSize:15, fontWeight:600, marginBottom:6 }}>No work orders yet</div>
+              <div style={{ fontSize:13 }}>Create a work order to track a factory assembly run from components through WIP to finished goods.</div>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr style={{ background:'hsl(220,15%,96%)' }}>
+                  <TH>WO #</TH><TH>SKU</TH><TH>Status</TH><TH right>Qty</TH><TH right>Component Cost</TH><TH right>Assembly Fee</TH><TH right>Total Cost</TH><TH right>Unit Cost</TH><TH>Date Ordered</TH>
+                </tr>
+              </thead>
+              <tbody>
+                {[...workOrders].sort((a,b) => statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status)).map(wo => {
+                  const compCost = wo.bomLines.reduce((s,l) => s + l.qty * l.unitCost, 0);
+                  const total    = compCost + (wo.assemblyFee||0);
+                  const unit     = wo.qtyOrdered > 0 ? total / wo.qtyOrdered : 0;
+                  return (
+                    <tr key={wo.id} style={{ cursor:'pointer' }}
+                      onClick={() => setSelected(wo)}
+                      onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,98%)'}
+                      onMouseLeave={e => e.currentTarget.style.background='white'}>
+                      <TD><span className="mono" style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)' }}>{wo.woNumber}</span></TD>
+                      <TD><span className="mono" style={{ fontSize:12 }}>{wo.sku}</span></TD>
+                      <TD><Badge cls={woStatusCls[wo.status]}>{woStatusLabel[wo.status]}</Badge></TD>
+                      <TD right mono>{wo.qtyOrdered}</TD>
+                      <TD right mono>{fmt(compCost)}</TD>
+                      <TD right mono>{wo.assemblyFee > 0 ? fmt(wo.assemblyFee) : <span style={{ color:'hsl(220,15%,70%)' }}>—</span>}</TD>
+                      <TD right mono bold>{fmt(total)}</TD>
+                      <TD right mono>{fmt(unit)}</TD>
+                      <TD muted>{wo.dateOrdered}</TD>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      <CreateWODialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <WODetail wo={selected} open={!!selected} onClose={() => setSelected(null)} />
+    </div>
+  );
+}
+
 // ── Bills Page ────────────────────────────────────────────────────────────────
 function BillsPage() {
   const { bills, updateBill, deleteBill, purchaseOrders, suppliers, getSupplierById } = useData();
@@ -3334,7 +3770,7 @@ function BillsPage() {
 
 // ── Global Search ─────────────────────────────────────────────────────────────
 function GlobalSearch({ setPage, onResult }) {
-  const { suppliers, parts, purchaseOrders, finishedGoodOrders, finishedGoods, bills, getSupplierById } = useData();
+  const { suppliers, parts, purchaseOrders, finishedGoodOrders, finishedGoods, bills, workOrders, getSupplierById } = useData();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const inputRef = useRef(null);
@@ -3366,6 +3802,10 @@ function GlobalSearch({ setPage, onResult }) {
     ...bills.filter(b =>
       b.poNumber.toLowerCase().includes(q) || (getSupplierById(b.supplierId)?.name||'').toLowerCase().includes(q)
     ).map(b => ({ type:'Bill', label: b.poNumber, sub: fmt(b.amount), cls:'badge-yellow', data: b, page:'bills' })),
+
+    ...workOrders.filter(w =>
+      w.woNumber.toLowerCase().includes(q) || w.sku.toLowerCase().includes(q)
+    ).map(w => ({ type:'WO', label: w.woNumber, sub: w.sku, cls:'badge-primary', data: w, page:'workorders' })),
   ].slice(0, 12);
 
   const handleSelect = (result) => {
@@ -3431,15 +3871,16 @@ function GlobalSearch({ setPage, onResult }) {
 }
 
 const navItems = [
-  { id:'dashboard', label:'Dashboard',       Icon: Icons.Dashboard },
-  { id:'inventory', label:'Inventory',       Icon: Icons.Package   },
-  { id:'pos',       label:'Purchase Orders', Icon: Icons.Clipboard },
-  { id:'bills',     label:'Vendor Bills',    Icon: Icons.Dollar    },
-  { id:'bom',       label:'BOM & COGS',      Icon: Icons.Layers    },
-  { id:'fg',        label:'Finished Goods',  Icon: Icons.Truck     },
-  { id:'suppliers', label:'Suppliers',        Icon: Icons.Users     },
-  { id:'ledger',    label:'General Ledger',   Icon: Icons.File      },
-  { id:'activity',  label:'Activity Log',     Icon: Icons.Clipboard },
+  { id:'dashboard',   label:'Dashboard',       Icon: Icons.Dashboard },
+  { id:'inventory',   label:'Inventory',       Icon: Icons.Package   },
+  { id:'pos',         label:'Purchase Orders', Icon: Icons.Clipboard },
+  { id:'workorders',  label:'Work Orders',     Icon: Icons.Layers    },
+  { id:'bills',       label:'Vendor Bills',    Icon: Icons.Dollar    },
+  { id:'bom',         label:'BOM & COGS',      Icon: Icons.Layers    },
+  { id:'fg',          label:'Finished Goods',  Icon: Icons.Truck     },
+  { id:'suppliers',   label:'Suppliers',       Icon: Icons.Users     },
+  { id:'ledger',      label:'General Ledger',  Icon: Icons.File      },
+  { id:'activity',    label:'Activity Log',    Icon: Icons.Clipboard },
 ];
 
 export default function App() {
@@ -3458,14 +3899,15 @@ export default function App() {
   };
 
   const pageComponent = page === 'dashboard' ? <Dashboard setPage={setPage} />
-    : page === 'inventory' ? <InventoryPage />
-    : page === 'pos'       ? <PurchaseOrdersPage supplierFilter={supplierFilter} clearFilter={() => setSupplierFilter(null)} />
-    : page === 'bills'     ? <BillsPage />
-    : page === 'bom'       ? <BOMPage />
-    : page === 'fg'        ? <FinishedGoodsPage />
-    : page === 'suppliers' ? <SupplierDirectory navigate={navigate} />
-    : page === 'ledger'    ? <LedgerPage />
-    : page === 'activity'  ? <ActivityLogPage />
+    : page === 'inventory'   ? <InventoryPage />
+    : page === 'pos'         ? <PurchaseOrdersPage supplierFilter={supplierFilter} clearFilter={() => setSupplierFilter(null)} />
+    : page === 'workorders'  ? <WorkOrdersPage />
+    : page === 'bills'       ? <BillsPage />
+    : page === 'bom'         ? <BOMPage />
+    : page === 'fg'          ? <FinishedGoodsPage />
+    : page === 'suppliers'   ? <SupplierDirectory navigate={navigate} />
+    : page === 'ledger'      ? <LedgerPage />
+    : page === 'activity'    ? <ActivityLogPage />
     : <Dashboard setPage={setPage} />;
 
   return (

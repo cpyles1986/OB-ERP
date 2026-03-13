@@ -36,35 +36,20 @@ const initialFinishedGoods = [{
 }];
 
 const initialInventory = [
-  { id: 'inv-1',  partId: 'part1', location: 'Assembly Factory',          qty: 500,  paidFor: true,  dateReceived: '2025-12-01' },
-  { id: 'inv-2',  partId: 'part1', location: 'Zinc Supplier',             qty: 1000, paidFor: true,  dateReceived: '2026-01-15' },
-  { id: 'inv-3',  partId: 'part2', location: 'Aluminum Handle Supplier',  qty: 800,  paidFor: true,  dateReceived: '2025-11-20' },
-  { id: 'inv-4',  partId: 'part2', location: 'Anodizer',                  qty: 300,  paidFor: true,  dateReceived: '2026-01-10' },
-  { id: 'inv-5',  partId: 'part3', location: 'Assembly Factory',          qty: 200,  paidFor: true,  dateReceived: '2026-02-01' },
-  { id: 'inv-6',  partId: 'part4', location: 'Assembly Factory',          qty: 2000, paidFor: true,  dateReceived: '2025-10-01' },
-  { id: 'inv-7',  partId: 'part5', location: 'Assembly Factory',          qty: 2000, paidFor: true,  dateReceived: '2025-10-01' },
-  { id: 'inv-8',  partId: 'pkg1',  location: 'Assembly Factory',          qty: 1500, paidFor: true,  dateReceived: '2025-09-15' },
-  { id: 'inv-9',  partId: 'pkg2',  location: 'Assembly Factory',          qty: 1000, paidFor: true,  dateReceived: '2025-11-01' },
-  { id: 'inv-10', partId: 'pkg3',  location: 'Assembly Factory',          qty: 1500, paidFor: true,  dateReceived: '2025-09-15' },
-  { id: 'inv-11', partId: 'part1', location: 'In Transit',                qty: 500,  paidFor: true,  dateReceived: '2026-03-05' },
+  { id: 'inv-1', partId: 'part1', location: 'Assembly Factory', qty: 1000, paidFor: true, dateReceived: '2026-03-01' },
+  { id: 'inv-2', partId: 'part2', location: 'Assembly Factory', qty: 1000, paidFor: true, dateReceived: '2026-03-01' },
+  { id: 'inv-3', partId: 'part3', location: 'Assembly Factory', qty: 1000, paidFor: true, dateReceived: '2026-03-01' },
+  { id: 'inv-4', partId: 'part4', location: 'Assembly Factory', qty: 1000, paidFor: true, dateReceived: '2026-03-01' },
+  { id: 'inv-5', partId: 'part5', location: 'Assembly Factory', qty: 1000, paidFor: true, dateReceived: '2026-03-01' },
+  { id: 'inv-6', partId: 'pkg1',  location: 'Assembly Factory', qty: 1000, paidFor: true, dateReceived: '2026-03-01' },
+  { id: 'inv-7', partId: 'pkg2',  location: 'Assembly Factory', qty: 1000, paidFor: true, dateReceived: '2026-03-01' },
+  { id: 'inv-8', partId: 'pkg3',  location: 'Assembly Factory', qty: 1000, paidFor: true, dateReceived: '2026-03-01' },
 ];
 
 const initialPOs = [
-  { id:'po-1', poNumber:'PO-2026-001', supplierId:'sup-zinc',   orderStatus:'submitted', paymentStatus:'paid',         shippingStatus:'delivered', dateOrdered:'2025-11-01', dateReceived:'2025-12-01', items:[{partId:'part1',qty:500, unitCost:2.00}], totalCost:1000,  carrier:'DHL',   trackingNumber:'DHL123456789', shipDate:'2025-11-15', eta:'2025-12-01' },
-  { id:'po-2', poNumber:'PO-2026-002', supplierId:'sup-zinc',   orderStatus:'submitted', paymentStatus:'paid',         shippingStatus:'delivered', dateOrdered:'2025-12-15', dateReceived:'2026-01-15', items:[{partId:'part1',qty:1000,unitCost:2.00}], totalCost:2000,  carrier:'FedEx', trackingNumber:'FX987654321',  shipDate:'2025-12-28', eta:'2026-01-15' },
-  { id:'po-3', poNumber:'PO-2026-003', supplierId:'sup-zinc',   orderStatus:'submitted', paymentStatus:'deposit-paid', shippingStatus:'shipped',   dateOrdered:'2026-02-20', items:[{partId:'part1',qty:500, unitCost:2.00}], totalCost:1000,  depositAmount:500,  carrier:'DHL',   trackingNumber:'DHL555666777', shipDate:'2026-03-01', eta:'2026-03-15' },
-  { id:'po-4', poNumber:'PO-2026-004', supplierId:'sup-alum',   orderStatus:'submitted', paymentStatus:'paid',         shippingStatus:'delivered', dateOrdered:'2025-10-01', dateReceived:'2025-11-20', items:[{partId:'part2',qty:800, unitCost:3.00}], totalCost:2400 },
-  { id:'po-5', poNumber:'PO-2026-005', supplierId:'sup-alum',   orderStatus:'submitted', paymentStatus:'deposit-paid', shippingStatus:'unshipped', dateOrdered:'2025-12-01', items:[{partId:'part2',qty:500, unitCost:3.00}], totalCost:1500,  depositAmount:750 },
-  { id:'po-6', poNumber:'PO-2026-006', supplierId:'sup-spring', orderStatus:'submitted', paymentStatus:'paid',         shippingStatus:'delivered', dateOrdered:'2025-09-01', dateReceived:'2025-10-01', items:[{partId:'part4',qty:2000,unitCost:0.05}], totalCost:100 },
-  { id:'po-7', poNumber:'PO-2026-007', supplierId:'sup-dowel',  orderStatus:'submitted', paymentStatus:'paid',         shippingStatus:'delivered', dateOrdered:'2025-09-01', dateReceived:'2025-10-01', items:[{partId:'part5',qty:2000,unitCost:0.02}], totalCost:40 },
-  { id:'po-8', poNumber:'PO-2026-008', supplierId:'sup-pkg',    orderStatus:'submitted', paymentStatus:'paid',         shippingStatus:'delivered', dateOrdered:'2025-08-15', dateReceived:'2025-09-15', items:[{partId:'pkg1',qty:1500,unitCost:0.50},{partId:'pkg3',qty:1500,unitCost:0.15}], totalCost:975 },
-  { id:'po-9',  poNumber:'PO-2026-009', supplierId:'sup-pkg',     orderStatus:'submitted', paymentStatus:'paid',         shippingStatus:'delivered', dateOrdered:'2025-10-01', dateReceived:'2025-11-01', items:[{partId:'pkg2',qty:1000,unitCost:0.20}], totalCost:200 },
-  { id:'po-10', poNumber:'PO-2026-010', supplierId:'sup-factory', orderStatus:'submitted', paymentStatus:'paid',         shippingStatus:'delivered', dateOrdered:'2026-01-15', dateReceived:'2026-02-15', items:[{fgId:'fg-element-b', fgSku:'ELEMENT-B_10BLD', qty:200, unitCost:13.92}], totalCost:2784 },
-  { id:'po-11', poNumber:'PO-2026-011', supplierId:'sup-factory', orderStatus:'submitted', paymentStatus:'deposit-paid', shippingStatus:'unshipped', dateOrdered:'2026-02-20', depositAmount:1254, items:[{fgId:'fg-element-b', fgSku:'ELEMENT-B_10BLD', qty:300, unitCost:13.92}], totalCost:4176 },
-  { id:'po-12', poNumber:'PO-2026-012', supplierId:'sup-factory', orderStatus:'submitted', paymentStatus:'unpaid',       shippingStatus:'unshipped', dateOrdered:'2026-03-05', items:[{fgId:'fg-element-b', fgSku:'ELEMENT-B_10BLD', qty:500, unitCost:13.92}], totalCost:6960 },
+  { id:'po-1', poNumber:'PO-2026-001', supplierId:'sup-zinc',    orderStatus:'submitted', paymentStatus:'unpaid', shippingStatus:'unshipped', dateOrdered:'2026-03-10', items:[{partId:'part1', qty:500,  unitCost:2.00}],                                          totalCost:1000  },
+  { id:'po-2', poNumber:'PO-2026-002', supplierId:'sup-factory', orderStatus:'submitted', paymentStatus:'unpaid', shippingStatus:'unshipped', dateOrdered:'2026-03-10', items:[{fgId:'fg-element-b', fgSku:'ELEMENT-B_10BLD', qty:1000, unitCost:13.92}], totalCost:13920 },
 ];
-
-// FGOs removed — finished good orders are now regular POs (see po-10, po-11, po-12 above)
 
 // ── Chart of Accounts ──────────────────────────────────────────────────────────
 const initialAccounts = [
@@ -82,86 +67,11 @@ const initialAccounts = [
   { id:'acct-5010', number:'5010', name:'COGS — Finished Goods Sold',   type:'cogs',      normal:'debit'  },
 ];
 
-// Seed journal entries to reflect the existing PO history in initialPOs
-// Each fully-paid+delivered PO gets: Inventory DR / Cash CR
-// deposit-paid POs get: Prepaid DR / Cash CR for deposit, Inventory DR / AP CR for full amount
-const initialJournal = [
-  // PO-2026-001: paid in full + delivered → Inventory DR 1000 / Cash CR 1000
-  { id:'je-1', date:'2025-11-01', memo:'PO-2026-001 — Zinc Razor Head 500 units', source:'po', sourceId:'po-1', lines:[
-    { accountId:'acct-1300', debit:1000,  credit:0    },
-    { accountId:'acct-1010', debit:0,     credit:1000 },
-  ]},
-  // PO-2026-002: paid in full + delivered
-  { id:'je-2', date:'2025-12-15', memo:'PO-2026-002 — Zinc Razor Head 1000 units', source:'po', sourceId:'po-2', lines:[
-    { accountId:'acct-1300', debit:2000,  credit:0    },
-    { accountId:'acct-1010', debit:0,     credit:2000 },
-  ]},
-  // PO-2026-003: deposit paid → Prepaid DR / Cash CR; outstanding on AP
-  { id:'je-3', date:'2026-02-20', memo:'PO-2026-003 — Deposit paid (50%)', source:'po', sourceId:'po-3', lines:[
-    { accountId:'acct-1400', debit:500,   credit:0   },
-    { accountId:'acct-1010', debit:0,     credit:500 },
-  ]},
-  { id:'je-4', date:'2026-02-20', memo:'PO-2026-003 — Invoice received, AP recorded', source:'po', sourceId:'po-3', lines:[
-    { accountId:'acct-1320', debit:1000,  credit:0    },
-    { accountId:'acct-2100', debit:0,     credit:1000 },
-  ]},
-  // PO-2026-004: paid + delivered
-  { id:'je-5', date:'2025-10-01', memo:'PO-2026-004 — Aluminum Handle 800 units', source:'po', sourceId:'po-4', lines:[
-    { accountId:'acct-1300', debit:2400,  credit:0    },
-    { accountId:'acct-1010', debit:0,     credit:2400 },
-  ]},
-  // PO-2026-005: deposit paid
-  { id:'je-6', date:'2025-12-01', memo:'PO-2026-005 — Deposit paid (50%)', source:'po', sourceId:'po-5', lines:[
-    { accountId:'acct-1400', debit:750,   credit:0   },
-    { accountId:'acct-1010', debit:0,     credit:750 },
-  ]},
-  { id:'je-7', date:'2025-12-01', memo:'PO-2026-005 — Invoice received, AP recorded', source:'po', sourceId:'po-5', lines:[
-    { accountId:'acct-1300', debit:1500,  credit:0    },
-    { accountId:'acct-2100', debit:0,     credit:1500 },
-  ]},
-  // PO-2026-006,007,008,009: all paid + delivered
-  { id:'je-8', date:'2025-09-01', memo:'PO-2026-006 — Springs 2000 units', source:'po', sourceId:'po-6', lines:[
-    { accountId:'acct-1300', debit:100, credit:0   },
-    { accountId:'acct-1010', debit:0,   credit:100 },
-  ]},
-  { id:'je-9', date:'2025-09-01', memo:'PO-2026-007 — Dowel Pins 2000 units', source:'po', sourceId:'po-7', lines:[
-    { accountId:'acct-1300', debit:40, credit:0  },
-    { accountId:'acct-1010', debit:0,  credit:40 },
-  ]},
-  { id:'je-10', date:'2025-08-15', memo:'PO-2026-008 — Packaging (Box+Inserts)', source:'po', sourceId:'po-8', lines:[
-    { accountId:'acct-1300', debit:975, credit:0   },
-    { accountId:'acct-1010', debit:0,   credit:975 },
-  ]},
-  { id:'je-11', date:'2025-10-01', memo:'PO-2026-009 — Box Sleeves 1000 units', source:'po', sourceId:'po-9', lines:[
-    { accountId:'acct-1300', debit:200, credit:0   },
-    { accountId:'acct-1010', debit:0,   credit:200 },
-  ]},
-  // PO-2026-010 paid (FG): Inventory FG DR / Cash CR
-  { id:'je-12', date:'2026-01-15', memo:'PO-2026-010 — Assembly Factory 200 units ELEMENT-B (paid in full)', source:'po', sourceId:'po-10', lines:[
-    { accountId:'acct-1310', debit:2784, credit:0    },
-    { accountId:'acct-1010', debit:0,    credit:2784 },
-  ]},
-  // PO-2026-011 deposit paid
-  { id:'je-14', date:'2026-02-20', memo:'PO-2026-011 — Deposit paid (30%)', source:'po', sourceId:'po-11', lines:[
-    { accountId:'acct-1400', debit:1254, credit:0    },
-    { accountId:'acct-1010', debit:0,    credit:1254 },
-  ]},
-  { id:'je-15', date:'2026-02-20', memo:'PO-2026-011 — Invoice recorded (AP)', source:'po', sourceId:'po-11', lines:[
-    { accountId:'acct-1310', debit:4176, credit:0    },
-    { accountId:'acct-2100', debit:0,    credit:4176 },
-  ]},
-  // Feb 2026 sales: 150 units ELEMENT-B shipped (from PO-10 inventory)
-  { id:'je-13', date:'2026-02-28', memo:'Sales Summary Feb 2026 — 150 units ELEMENT-B_10BLD', source:'sales', sourceId:'sales-feb-2026', lines:[
-    { accountId:'acct-1010', debit:7350, credit:0    },
-    { accountId:'acct-4000', debit:0,    credit:7350 },
-    { accountId:'acct-5010', debit:2088, credit:0    },
-    { accountId:'acct-1310', debit:0,    credit:2088 },
-  ]},
-];
+const initialJournal = [];
 
 
 // ── Persistence ────────────────────────────────────────────────────────────────
-const STORE_KEY = 'oneblade_erp_v3';
+const STORE_KEY = 'oneblade_erp_v4';
 
 function loadStore() {
   try {
@@ -996,10 +906,39 @@ function CreatePODialog() {
 // ── PO Detail Modal ────────────────────────────────────────────────────────────
 // onBack: optional callback — when set, shows a back arrow instead of just closing
 function PODetail({ po, open, onClose, onBack }) {
-  const { getSupplierById, getPartById, finishedGoods, addBill, bills } = useData();
+  const { getSupplierById, getPartById, finishedGoods, addBill, bills, updateBill } = useData();
+  const [viewingBill, setViewingBill] = useState(false); // true = show bill detail view
+  const [billF, setBillF] = useState({});
+
   if (!po) return null;
   const supplier = getSupplierById(po.supplierId);
   const existingBill = bills.find(b => b.poId === po.id);
+
+  // Bill number display (matches BillsPage numbering: position from end)
+  const billIndex = existingBill ? bills.findIndex(b => b.id === existingBill.id) : -1;
+  const billNumber = billIndex >= 0 ? `BILL-${String(bills.length - billIndex).padStart(3,'0')}` : null;
+
+  const openBillView = () => {
+    setBillF({ ...existingBill, lineItems: existingBill.lineItems ? existingBill.lineItems.map(l => ({...l})) : [] });
+    setViewingBill(true);
+  };
+  const closeBillView = () => { setViewingBill(false); setBillF({}); };
+
+  const billLineItemsTotal = (billF.lineItems||[]).reduce((s,l) => s+(parseFloat(l.qty)||0)*(parseFloat(l.unitPrice)||0), 0);
+  const updateBillLineItem = (idx, updates) => setBillF(p => ({ ...p, lineItems: p.lineItems.map((l,i) => i===idx ? {...l,...updates} : l) }));
+  const addBillLineItem    = () => setBillF(p => ({ ...p, lineItems: [...(p.lineItems||[]), { description:'', sku:'', qty:1, unitPrice:0 }] }));
+  const removeBillLineItem = idx => setBillF(p => ({ ...p, lineItems: p.lineItems.filter((_,i) => i!==idx) }));
+
+  const saveBill = () => {
+    const lineItems = billF.lineItems || [];
+    const amount = lineItems.length > 0 ? billLineItemsTotal : (parseFloat(billF.amount)||existingBill.amount);
+    updateBill(existingBill.id, {
+      status: billF.status, dueDate: billF.dueDate, amountPaid: parseFloat(billF.amountPaid)||0,
+      memo: billF.memo, invoiceUrl: billF.invoiceUrl||undefined, lineItems, amount,
+    });
+    toast.success('Bill updated');
+    closeBillView();
+  };
 
   const handleCreateBill = () => {
     const amountDue = po.paymentStatus === 'deposit-paid'
@@ -1044,8 +983,18 @@ function PODetail({ po, open, onClose, onBack }) {
   );
 
   return (
-    <Modal title="" open={open} onClose={onClose} wide
-      headerAction={onBack && (
+    <Modal title={viewingBill ? billNumber : ''} open={open} onClose={viewingBill ? closeBillView : onClose} wide
+      headerAction={viewingBill ? (
+        <button onClick={closeBillView} style={{
+          background:'none', border:'none', cursor:'pointer', padding:'2px 0',
+          color:'hsl(220,10%,56%)', display:'flex', alignItems:'center', gap:4, fontSize:13,
+          fontFamily:'inherit', fontWeight:500,
+        }}
+        onMouseEnter={e=>e.currentTarget.style.color='hsl(220,25%,10%)'}
+        onMouseLeave={e=>e.currentTarget.style.color='hsl(220,10%,56%)'}>
+          ← Back to PO
+        </button>
+      ) : onBack ? (
         <button onClick={onBack} style={{
           background:'none', border:'none', cursor:'pointer', padding:'2px 0',
           color:'hsl(220,10%,56%)', display:'flex', alignItems:'center', gap:4, fontSize:13,
@@ -1055,8 +1004,86 @@ function PODetail({ po, open, onClose, onBack }) {
         onMouseLeave={e=>e.currentTarget.style.color='hsl(220,10%,56%)'}>
           ← Back
         </button>
-      )}>
+      ) : null}>
       <div style={{ fontFamily:'DM Sans, system-ui, sans-serif' }}>
+        {viewingBill ? (
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            <div style={{ display:'flex', gap:16, background:'hsl(220,15%,97%)', borderRadius:8, padding:'12px 16px' }}>
+              <div>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Supplier</div>
+                <div style={{ fontSize:13, fontWeight:600 }}>{supplier?.name || '—'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Created</div>
+                <div style={{ fontSize:13 }}>{existingBill?.dateCreated}</div>
+              </div>
+              <div style={{ marginLeft:'auto', textAlign:'right' }}>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Balance Due</div>
+                <div className="mono" style={{ fontSize:20, fontWeight:700, color:'hsl(38,80%,35%)' }}>
+                  {fmt(((billF.lineItems||[]).length > 0 ? billLineItemsTotal : (existingBill?.amount||0)) - (parseFloat(billF.amountPaid)||0))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ borderRadius:8, border:'1px solid hsl(220,15%,88%)', overflow:'hidden' }}>
+              <div style={{ background:'hsl(220,15%,96%)', padding:'8px 14px', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span>Line Items</span>
+                <button type="button" onClick={addBillLineItem} style={{ fontSize:11, fontWeight:600, color:'hsl(220,70%,45%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>+ Add Line</button>
+              </div>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead>
+                  <tr style={{ background:'hsl(220,15%,97%)' }}>
+                    {['Description','SKU','Qty','Unit Price','Total',''].map((h,i) => (
+                      <th key={i} style={{ padding:'6px 10px', fontSize:11, fontWeight:500, color:'hsl(220,10%,56%)', textAlign: i>=2&&i<=4?'right':'left', borderBottom:'1px solid hsl(220,15%,90%)', width:i===5?28:'auto' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(billF.lineItems||[]).length === 0 && (
+                    <tr><td colSpan={6} style={{ padding:'14px 10px', textAlign:'center', fontSize:12, color:'hsl(220,10%,65%)' }}>No line items</td></tr>
+                  )}
+                  {(billF.lineItems||[]).map((line, idx) => (
+                    <tr key={idx} style={{ borderBottom:'1px solid hsl(220,15%,92%)' }}>
+                      <td style={{ padding:'4px 6px' }}><input value={line.description} onChange={e => updateBillLineItem(idx,{description:e.target.value})} style={{ width:'100%', padding:'5px 8px', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:5, fontFamily:'inherit', background:'white' }} /></td>
+                      <td style={{ padding:'4px 6px' }}><input value={line.sku} onChange={e => updateBillLineItem(idx,{sku:e.target.value})} style={{ width:'100%', padding:'5px 8px', fontSize:11, fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} /></td>
+                      <td style={{ padding:'4px 6px', textAlign:'right' }}><input type="number" min="0" value={line.qty} onChange={e => updateBillLineItem(idx,{qty:parseFloat(e.target.value)||0})} style={{ width:64, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} /></td>
+                      <td style={{ padding:'4px 6px', textAlign:'right' }}><input type="number" step="0.01" min="0" value={line.unitPrice} onChange={e => updateBillLineItem(idx,{unitPrice:parseFloat(e.target.value)||0})} style={{ width:80, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} /></td>
+                      <td style={{ padding:'4px 10px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:12, fontWeight:600, whiteSpace:'nowrap' }}>{fmt((parseFloat(line.qty)||0)*(parseFloat(line.unitPrice)||0))}</td>
+                      <td style={{ padding:'4px 6px', textAlign:'center' }}><button type="button" onClick={() => removeBillLineItem(idx)} style={{ background:'none', border:'none', color:'hsl(0,60%,60%)', cursor:'pointer', fontSize:14 }}>✕</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+                {(billF.lineItems||[]).length > 0 && (
+                  <tfoot><tr>
+                    <td colSpan={4} style={{ padding:'8px 10px', textAlign:'right', fontWeight:600, fontSize:13, borderTop:'2px solid hsl(220,15%,85%)' }}>Total</td>
+                    <td style={{ padding:'8px 10px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontWeight:700, fontSize:14, borderTop:'2px solid hsl(220,15%,85%)' }}>{fmt(billLineItemsTotal)}</td>
+                    <td style={{ borderTop:'2px solid hsl(220,15%,85%)' }}/>
+                  </tr></tfoot>
+                )}
+              </table>
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+              <Field label="Status">
+                <Select value={billF.status||'open'} onChange={v => setBillF(p=>({...p,status:v}))}>
+                  <option value="open">Open</option>
+                  <option value="partial">Partial</option>
+                  <option value="paid">Paid</option>
+                  <option value="void">Void</option>
+                </Select>
+              </Field>
+              <Field label="Amount Paid ($)"><Input type="number" step="0.01" min="0" value={billF.amountPaid??''} onChange={e=>setBillF(p=>({...p,amountPaid:e.target.value}))} className="mono" /></Field>
+              <Field label="Due Date"><Input type="date" value={billF.dueDate??''} onChange={e=>setBillF(p=>({...p,dueDate:e.target.value}))} /></Field>
+            </div>
+            <Field label="Memo"><Input value={billF.memo??''} onChange={e=>setBillF(p=>({...p,memo:e.target.value}))} /></Field>
+
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid hsl(220,15%,90%)', paddingTop:16 }}>
+              <Btn variant="ghost" onClick={closeBillView}>Cancel</Btn>
+              <Btn onClick={saveBill}>Save Changes</Btn>
+            </div>
+          </div>
+        ) : (
+        <React.Fragment>
         {/* Header */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
           <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
@@ -1076,8 +1103,6 @@ function PODetail({ po, open, onClose, onBack }) {
         {/* Status badges */}
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
           <Badge cls={orderStatusCls[po.orderStatus]}>{{ draft:'Draft', 'pending-approval':'Pending Approval', approved:'Approved', submitted:'Submitted to Supplier' }[po.orderStatus] || po.orderStatus}</Badge>
-          <Badge cls={paymentCls[po.paymentStatus]}>{{ unpaid:'Unpaid','deposit-paid':'Deposit Paid',paid:'Paid in Full' }[po.paymentStatus]}</Badge>
-          <Badge cls={shippingCls[po.shippingStatus]}>{{ unshipped:'Unshipped',shipped:'Shipped',delivered:'Delivered' }[po.shippingStatus]}</Badge>
         </div>
 
         {/* Supplier */}
@@ -1209,14 +1234,25 @@ function PODetail({ po, open, onClose, onBack }) {
         <Separator />
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>
-            {existingBill
-              ? <span style={{ color:'hsl(160,60%,35%)', fontWeight:500 }}>✓ Bill exists for this PO</span>
-              : 'No bill created yet'}
+            {existingBill ? 'Vendor Bill:' : 'No bill created yet'}
           </div>
-          {!existingBill && (
+          {existingBill ? (
+            <button onClick={openBillView} style={{
+              fontSize:13, fontWeight:700, fontFamily:'JetBrains Mono,monospace',
+              color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)',
+              border:'1px solid hsl(220,70%,85%)', borderRadius:6,
+              padding:'6px 14px', cursor:'pointer',
+            }}
+            onMouseEnter={e=>e.currentTarget.style.background='hsl(220,70%,90%)'}
+            onMouseLeave={e=>e.currentTarget.style.background='hsl(220,70%,96%)'}>
+              {billNumber} →
+            </button>
+          ) : (
             <Btn variant="outline" size="sm" onClick={handleCreateBill}>Create Vendor Bill</Btn>
           )}
         </div>
+        </React.Fragment>
+        )}
       </div>
     </Modal>
   );
@@ -1296,10 +1332,15 @@ function BOMEditor({ fgId, bom }) {
 
 // ── Pages ──────────────────────────────────────────────────────────────────────
 function Dashboard({ setPage }) {
-  const { parts, inventoryRecords, purchaseOrders, finishedGoods, getPartById, getSupplierById, activityLog } = useData();
+  const { parts, inventoryRecords, purchaseOrders, finishedGoods, getPartById, getSupplierById, activityLog, bills } = useData();
   const [selectedPO, setSelectedPO] = useState(null);
 
-  const totalPartsSpend = purchaseOrders.reduce((s,po) => s+po.totalCost, 0);
+  // Total value of component/packaging inventory on hand
+  const componentInventoryValue = inventoryRecords.reduce((sum, r) => {
+    const part = getPartById(r.partId);
+    if (!part || part.type === 'service') return sum;
+    return sum + r.qty * part.unitCost;
+  }, 0);
 
   // FG stats derived from POs with fgId line items
   const fgPOItems = purchaseOrders.flatMap(po =>
@@ -1318,6 +1359,29 @@ function Dashboard({ setPage }) {
     return { part, totalQty, locations };
   });
 
+  // Inventory grouped by location (components only)
+  const locationMap = {};
+  inventoryRecords.forEach(r => {
+    const part = getPartById(r.partId);
+    if (!part || part.type === 'service') return;
+    if (!locationMap[r.location]) locationMap[r.location] = { qty: 0, value: 0, parts: {} };
+    locationMap[r.location].qty += r.qty;
+    locationMap[r.location].value += r.qty * part.unitCost;
+    locationMap[r.location].parts[part.name] = (locationMap[r.location].parts[part.name] || 0) + r.qty;
+  });
+  const inventoryByLocation = Object.entries(locationMap)
+    .sort((a, b) => b[1].value - a[1].value);
+
+  // PO vs vendor bill delta — only POs that have a linked bill
+  const poBillDeltas = purchaseOrders
+    .map(po => {
+      const bill = bills.find(b => b.poId === po.id);
+      if (!bill) return null;
+      return { po, bill, delta: bill.amount - po.totalCost };
+    })
+    .filter(Boolean);
+  const totalBillDelta = poBillDeltas.reduce((s, d) => s + d.delta, 0);
+
   const rowHover = { onMouseEnter: e => e.currentTarget.style.background='hsl(220,70%,98%)', onMouseLeave: e => e.currentTarget.style.background='transparent' };
 
   return (
@@ -1330,8 +1394,8 @@ function Dashboard({ setPage }) {
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-        <div style={{ cursor:'pointer' }} onClick={() => setPage('pos')}>
-          <StatCard title="Parts Spend (Total)" value={fmt(totalPartsSpend)} subtitle="All POs to date" icon={Icons.Dollar} variant="primary" />
+        <div style={{ cursor:'pointer' }} onClick={() => setPage('inventory')}>
+          <StatCard title="Component Inventory Value" value={fmt(componentInventoryValue)} subtitle="Current on-hand components &amp; packaging" icon={Icons.Package} variant="primary" />
         </div>
         <div style={{ cursor:'pointer' }} onClick={() => setPage('pos')}>
           <StatCard title="FG On Order" value={`${totalFGOnOrder} units`} subtitle={`${totalFGReceived} received`} icon={Icons.Truck} variant="warning" />
@@ -1399,6 +1463,105 @@ function Dashboard({ setPage }) {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Inventory by Location + PO vs Bill Delta */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+
+        {/* Inventory by location */}
+        <div onClick={() => setPage('inventory')} style={{ cursor:'pointer' }}>
+          <Card>
+            <CardHeader>
+              <CardTitle style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span><Icons.Package size={15} /> Inventory by Location</span>
+                <span style={{ fontSize:11, color:'hsl(220,70%,45%)', fontWeight:600 }}>View all →</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {inventoryByLocation.length === 0 ? (
+                <div style={{ padding:'16px 0', textAlign:'center', color:'hsl(220,10%,65%)', fontSize:13 }}>No inventory records</div>
+              ) : inventoryByLocation.map(([location, data]) => (
+                <div key={location} style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'10px 0', borderBottom:'1px solid hsl(220,15%,92%)' }}>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:500 }}>{location}</div>
+                    <div style={{ fontSize:12, color:'hsl(220,10%,56%)', marginTop:2 }}>
+                      {Object.entries(data.parts).map(([name, qty]) => `${name}: ${qty.toLocaleString()}`).join(' · ')}
+                    </div>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div className="mono" style={{ fontSize:13, fontWeight:700 }}>{fmt(data.value)}</div>
+                    <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{data.qty.toLocaleString()} units</div>
+                  </div>
+                </div>
+              ))}
+              {inventoryByLocation.length > 0 && (
+                <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, fontSize:13 }}>
+                  <span style={{ color:'hsl(220,10%,56%)' }}>Total</span>
+                  <span className="mono" style={{ fontWeight:700 }}>{fmt(componentInventoryValue)}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* PO vs Vendor Bill delta */}
+        <div onClick={e => { e.stopPropagation(); }} style={{ cursor:'default' }}>
+          <Card>
+            <CardHeader>
+              <CardTitle style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span><Icons.Dollar size={15} /> PO vs. Vendor Bill</span>
+                <span
+                  onClick={() => setPage('bills')}
+                  style={{ fontSize:11, color:'hsl(220,70%,45%)', fontWeight:600, cursor:'pointer' }}>
+                  View bills →
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {poBillDeltas.length === 0 ? (
+                <div style={{ padding:'16px 0', textAlign:'center', color:'hsl(220,10%,65%)', fontSize:13 }}>
+                  No bills linked to POs yet
+                </div>
+              ) : (
+                <>
+                  {poBillDeltas.map(({ po, bill, delta }) => (
+                    <div key={po.id}
+                      style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'10px 0', borderBottom:'1px solid hsl(220,15%,92%)', cursor:'pointer' }}
+                      {...rowHover}
+                      onClick={() => setSelectedPO(po)}>
+                      <div>
+                        <div className="mono" style={{ fontSize:13, fontWeight:500, color:'hsl(220,70%,45%)' }}>{po.poNumber}</div>
+                        <div style={{ fontSize:12, color:'hsl(220,10%,56%)', marginTop:2 }}>
+                          PO {fmt(po.totalCost)} · Bill {fmt(bill.amount)}
+                        </div>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <div className="mono" style={{
+                          fontSize:13, fontWeight:700,
+                          color: delta === 0 ? 'hsl(220,10%,40%)' : delta > 0 ? 'hsl(0,65%,45%)' : 'hsl(140,55%,35%)',
+                        }}>
+                          {delta > 0 ? '+' : ''}{fmt(delta)}
+                        </div>
+                        <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>
+                          {delta > 0 ? 'bill over PO' : delta < 0 ? 'bill under PO' : 'matched'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, fontSize:13 }}>
+                    <span style={{ color:'hsl(220,10%,56%)' }}>Net delta</span>
+                    <span className="mono" style={{
+                      fontWeight:700,
+                      color: totalBillDelta === 0 ? 'hsl(220,10%,40%)' : totalBillDelta > 0 ? 'hsl(0,65%,45%)' : 'hsl(140,55%,35%)',
+                    }}>
+                      {totalBillDelta > 0 ? '+' : ''}{fmt(totalBillDelta)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* POs — each row opens PO modal */}
@@ -1905,7 +2068,7 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
           <table>
             <thead>
               <tr style={{ background:'hsl(220,15%,96%)' }}>
-                <TH>PO #</TH><TH>Supplier</TH><TH>Items</TH><TH right>Total</TH><TH>Order</TH><TH>Payment</TH><TH>Shipping</TH><TH>Date</TH>
+                <TH>PO #</TH><TH>Supplier</TH><TH>Items</TH><TH right>Total</TH><TH>Order</TH><TH>Date</TH>
               </tr>
             </thead>
             <tbody>
@@ -1935,22 +2098,6 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
                         onChange={v => update(po.id, 'orderStatus', v)}
                         colorMap={orderStatusCls}
                         options={[['draft','Draft'],['pending-approval','Pending Approval'],['approved','Approved'],['submitted','Submitted to Supplier']]}
-                      />
-                    </td>
-                    <td style={{ padding:'8px 14px' }}>
-                      <InlineStatusSelect
-                        value={po.paymentStatus}
-                        onChange={v => update(po.id, 'paymentStatus', v)}
-                        colorMap={paymentCls}
-                        options={[['unpaid','Unpaid'],['deposit-paid','Deposit Paid'],['paid','Paid']]}
-                      />
-                    </td>
-                    <td style={{ padding:'8px 14px' }}>
-                      <InlineStatusSelect
-                        value={po.shippingStatus}
-                        onChange={v => update(po.id, 'shippingStatus', v)}
-                        colorMap={shippingCls}
-                        options={[['unshipped','Unshipped'],['shipped','Shipped'],['delivered','Delivered']]}
                       />
                     </td>
                     <TD muted>{po.dateOrdered}</TD>
@@ -3332,11 +3479,68 @@ function WorkOrdersPage() {
 
 // ── Bills Page ────────────────────────────────────────────────────────────────
 function BillsPage() {
-  const { bills, updateBill, deleteBill, purchaseOrders, suppliers, getSupplierById, finishedGoods, parts, workOrders, addWorkOrder } = useData();
+  const { bills, updateBill, deleteBill, addBill, purchaseOrders, suppliers, getSupplierById, finishedGoods, getPartById, workOrders, addWorkOrder } = useData();
   const [selected, setSelected] = useState(null);
   const [f, setF] = useState({});
   const [woFromBill, setWoFromBill] = useState(null); // bill to pre-fill WO from
   const fld = k => ({ value: f[k]??'', onChange: e => setF(p=>({...p,[k]:e.target.value})) });
+
+  // ── New bill creation state ──
+  const [creatingNew, setCreatingNew]   = useState(false);
+  const [newBill, setNewBill]           = useState(null);
+  const [showPoPicker, setShowPoPicker] = useState(false);
+  const [poPickerPage, setPoPickerPage] = useState(0);
+  const PO_PAGE_SIZE = 10;
+
+  const openNewBill = () => {
+    setNewBill({ status:'open', amountPaid:0, dueDate:'', memo:'', dateCreated:today(), lineItems:[] });
+    setShowPoPicker(false);
+    setPoPickerPage(0);
+    setCreatingNew(true);
+  };
+  const closeNewBill = () => { setCreatingNew(false); setNewBill(null); setShowPoPicker(false); };
+
+  const newBillFld = k => ({
+    value: newBill?.[k] ?? '',
+    onChange: e => setNewBill(p => ({ ...p, [k]: e.target.value })),
+  });
+  const newLineItemsTotal = (newBill?.lineItems||[]).reduce((s,l) => s+(parseFloat(l.qty)||0)*(parseFloat(l.unitPrice)||0), 0);
+
+  const updateNewLineItem = (idx, updates) => setNewBill(p => ({ ...p, lineItems: p.lineItems.map((l,i) => i===idx ? {...l,...updates} : l) }));
+  const addNewLineItem    = () => setNewBill(p => ({ ...p, lineItems: [...(p.lineItems||[]), { description:'', sku:'', qty:1, unitPrice:0 }] }));
+  const removeNewLineItem = idx => setNewBill(p => ({ ...p, lineItems: p.lineItems.filter((_,i) => i!==idx) }));
+
+  const selectPOForNewBill = (po) => {
+    const lineItems = po.items.map(i => {
+      if (i.partId) {
+        const part = getPartById(i.partId);
+        return { description: part?.name || '—', sku: part?.sku || '—', qty: i.qty, unitPrice: i.unitCost };
+      } else {
+        const fg = finishedGoods.find(f => f.id === i.fgId);
+        return { description: fg?.name || i.fgSku || '—', sku: i.fgSku || '—', qty: i.qty, unitPrice: i.unitCost };
+      }
+    });
+    const amount = lineItems.reduce((s,l) => s + (l.qty||0)*(l.unitPrice||0), 0);
+    setNewBill(p => ({
+      ...p,
+      poId: po.id, poNumber: po.poNumber, supplierId: po.supplierId,
+      amount, lineItems,
+      memo: `Bill from ${po.poNumber}`,
+    }));
+    setShowPoPicker(false);
+  };
+
+  const saveNewBill = () => {
+    const lineItems = newBill.lineItems || [];
+    const amount = lineItems.length > 0 ? newLineItemsTotal : (parseFloat(newBill.amount)||0);
+    addBill({ ...newBill, amount });
+    closeNewBill();
+    toast.success('Bill created');
+  };
+
+  const sortedPOs = [...purchaseOrders].reverse();
+  const poPickerPOs = sortedPOs.slice(poPickerPage * PO_PAGE_SIZE, (poPickerPage + 1) * PO_PAGE_SIZE);
+  const poPickerMaxPage = Math.ceil(sortedPOs.length / PO_PAGE_SIZE) - 1;
 
   const openBill = (bill) => { setSelected(bill); setF({...bill, lineItems: bill.lineItems ? [...bill.lineItems.map(l=>({...l}))] : [] }); };
   const closeBill = () => { setSelected(null); setF({}); };
@@ -3392,6 +3596,7 @@ function BillsPage() {
           <div style={{ fontSize:22, fontWeight:700 }}>Vendor Bills</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>Create bills manually from any PO · Click to edit and mark paid</div>
         </div>
+        <Btn onClick={openNewBill}>+ New Vendor Bill</Btn>
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
@@ -3617,6 +3822,176 @@ function BillsPage() {
 
       {/* Create WO from Bill dialog */}
       <CreateWOFromBillDialog bill={woFromBill} onClose={() => setWoFromBill(null)} />
+
+      {/* ── New Vendor Bill modal ── */}
+      <Modal
+        title={showPoPicker ? '' : 'New Vendor Bill'}
+        open={creatingNew}
+        onClose={closeNewBill}
+        wide
+        headerAction={showPoPicker ? (
+          <button onClick={() => setShowPoPicker(false)} style={{
+            background:'none', border:'none', cursor:'pointer', padding:'2px 0',
+            color:'hsl(220,10%,56%)', display:'flex', alignItems:'center', gap:4,
+            fontSize:13, fontFamily:'inherit', fontWeight:500,
+          }}
+          onMouseEnter={e => e.currentTarget.style.color='hsl(220,25%,10%)'}
+          onMouseLeave={e => e.currentTarget.style.color='hsl(220,10%,56%)'}>
+            ← Back
+          </button>
+        ) : null}
+      >
+        {creatingNew && newBill && (
+          showPoPicker ? (
+            /* ── PO Picker view ── */
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+              <div style={{ fontSize:14, fontWeight:600, marginBottom:4 }}>Select a Purchase Order</div>
+              <div style={{ border:'1px solid hsl(220,15%,88%)', borderRadius:8, overflow:'hidden' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead>
+                    <tr style={{ background:'hsl(220,15%,96%)' }}>
+                      <th style={{ padding:'8px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'left' }}>PO #</th>
+                      <th style={{ padding:'8px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'left' }}>Date</th>
+                      <th style={{ padding:'8px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'left' }}>Vendor</th>
+                      <th style={{ padding:'8px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'right' }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {poPickerPOs.map(po => {
+                      const sup = getSupplierById(po.supplierId);
+                      return (
+                        <tr key={po.id}
+                          style={{ cursor:'pointer', borderBottom:'1px solid hsl(220,15%,92%)' }}
+                          onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,97%)'}
+                          onMouseLeave={e => e.currentTarget.style.background='white'}
+                          onClick={() => selectPOForNewBill(po)}>
+                          <td style={{ padding:'10px 12px' }}>
+                            <span className="mono" style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)' }}>{po.poNumber}</span>
+                          </td>
+                          <td style={{ padding:'10px 12px', fontSize:12, color:'hsl(220,10%,56%)' }}>{po.dateOrdered}</td>
+                          <td style={{ padding:'10px 12px', fontSize:13 }}>{sup?.name || '—'}</td>
+                          <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, fontWeight:600 }}>{fmt(po.totalCost)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {sortedPOs.length > PO_PAGE_SIZE && (
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12, color:'hsl(220,10%,56%)' }}>
+                  <button
+                    disabled={poPickerPage === 0}
+                    onClick={() => setPoPickerPage(p => p - 1)}
+                    style={{ fontSize:12, fontWeight:600, color: poPickerPage===0 ? 'hsl(220,15%,75%)' : 'hsl(220,70%,45%)', background:'none', border:'none', cursor: poPickerPage===0 ? 'default' : 'pointer', fontFamily:'inherit' }}>
+                    ← Previous
+                  </button>
+                  <span>Page {poPickerPage + 1} of {poPickerMaxPage + 1}</span>
+                  <button
+                    disabled={poPickerPage >= poPickerMaxPage}
+                    onClick={() => setPoPickerPage(p => p + 1)}
+                    style={{ fontSize:12, fontWeight:600, color: poPickerPage>=poPickerMaxPage ? 'hsl(220,15%,75%)' : 'hsl(220,70%,45%)', background:'none', border:'none', cursor: poPickerPage>=poPickerMaxPage ? 'default' : 'pointer', fontFamily:'inherit' }}>
+                    Next →
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ── Bill Editor view ── */
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+              {/* Create from PO button */}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <button onClick={() => { setPoPickerPage(0); setShowPoPicker(true); }}
+                  style={{ fontSize:13, fontWeight:600, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:6, padding:'7px 14px', cursor:'pointer', fontFamily:'inherit' }}
+                  onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,90%)'}
+                  onMouseLeave={e => e.currentTarget.style.background='hsl(220,70%,96%)'}>
+                  Create from PO
+                </button>
+                {newBill.poNumber && (
+                  <span style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>
+                    From <span className="mono" style={{ fontWeight:600, color:'hsl(220,70%,45%)' }}>{newBill.poNumber}</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Line Items */}
+              <div style={{ borderRadius:8, border:'1px solid hsl(220,15%,88%)', overflow:'hidden' }}>
+                <div style={{ background:'hsl(220,15%,96%)', padding:'8px 14px', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span>Line Items</span>
+                  <button type="button" onClick={addNewLineItem} style={{ fontSize:11, fontWeight:600, color:'hsl(220,70%,45%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>+ Add Line</button>
+                </div>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead>
+                    <tr style={{ background:'hsl(220,15%,97%)' }}>
+                      {['Description','SKU','Qty','Unit Price','Total',''].map((h,i) => (
+                        <th key={i} style={{ padding:'6px 10px', fontSize:11, fontWeight:500, color:'hsl(220,10%,56%)', textAlign: i>=2&&i<=4 ? 'right' : 'left', borderBottom:'1px solid hsl(220,15%,90%)', width: i===5 ? 28 : 'auto' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(newBill.lineItems||[]).length === 0 && (
+                      <tr><td colSpan={6} style={{ padding:'14px 10px', textAlign:'center', fontSize:12, color:'hsl(220,10%,65%)' }}>No line items — click "Create from PO" to auto-populate, or add lines manually.</td></tr>
+                    )}
+                    {(newBill.lineItems||[]).map((line, idx) => (
+                      <tr key={idx} style={{ borderBottom:'1px solid hsl(220,15%,92%)' }}>
+                        <td style={{ padding:'4px 6px' }}>
+                          <input value={line.description} onChange={e => updateNewLineItem(idx, { description: e.target.value })}
+                            style={{ width:'100%', padding:'5px 8px', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:5, fontFamily:'inherit', background:'white' }} />
+                        </td>
+                        <td style={{ padding:'4px 6px' }}>
+                          <input value={line.sku} onChange={e => updateNewLineItem(idx, { sku: e.target.value })}
+                            style={{ width:'100%', padding:'5px 8px', fontSize:11, fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
+                        </td>
+                        <td style={{ padding:'4px 6px', textAlign:'right' }}>
+                          <input type="number" min="0" value={line.qty} onChange={e => updateNewLineItem(idx, { qty: parseFloat(e.target.value)||0 })}
+                            style={{ width:64, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
+                        </td>
+                        <td style={{ padding:'4px 6px', textAlign:'right' }}>
+                          <input type="number" step="0.01" min="0" value={line.unitPrice} onChange={e => updateNewLineItem(idx, { unitPrice: parseFloat(e.target.value)||0 })}
+                            style={{ width:80, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
+                        </td>
+                        <td style={{ padding:'4px 10px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:12, fontWeight:600, whiteSpace:'nowrap' }}>
+                          {fmt((parseFloat(line.qty)||0) * (parseFloat(line.unitPrice)||0))}
+                        </td>
+                        <td style={{ padding:'4px 6px', textAlign:'center' }}>
+                          <button type="button" onClick={() => removeNewLineItem(idx)} style={{ background:'none', border:'none', color:'hsl(0,60%,60%)', cursor:'pointer', fontSize:14 }}>✕</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {(newBill.lineItems||[]).length > 0 && (
+                    <tfoot>
+                      <tr>
+                        <td colSpan={4} style={{ padding:'8px 10px', textAlign:'right', fontWeight:600, fontSize:13, borderTop:'2px solid hsl(220,15%,85%)' }}>Total</td>
+                        <td style={{ padding:'8px 10px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontWeight:700, fontSize:14, borderTop:'2px solid hsl(220,15%,85%)' }}>{fmt(newLineItemsTotal)}</td>
+                        <td style={{ borderTop:'2px solid hsl(220,15%,85%)' }}/>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+                <Field label="Status">
+                  <Select value={newBill.status||'open'} onChange={v => setNewBill(p=>({...p,status:v}))}>
+                    <option value="open">Open</option>
+                    <option value="partial">Partial</option>
+                    <option value="paid">Paid</option>
+                    <option value="void">Void</option>
+                  </Select>
+                </Field>
+                <Field label="Amount Paid ($)"><Input type="number" step="0.01" min="0" {...newBillFld('amountPaid')} className="mono" /></Field>
+                <Field label="Due Date"><Input type="date" {...newBillFld('dueDate')} /></Field>
+              </div>
+              <Field label="Memo"><Input {...newBillFld('memo')} /></Field>
+
+              <div style={{ display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid hsl(220,15%,90%)', paddingTop:16 }}>
+                <Btn variant="ghost" onClick={closeNewBill}>Cancel</Btn>
+                <Btn onClick={saveNewBill}>Save Bill</Btn>
+              </div>
+            </div>
+          )
+        )}
+      </Modal>
     </div>
   );
 }

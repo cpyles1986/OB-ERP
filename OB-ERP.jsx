@@ -332,6 +332,18 @@ const orderStatusCls  = { draft:'badge-muted', 'pending-approval':'badge-yellow'
 const paymentCls      = { unpaid:'badge-red', 'deposit-paid':'badge-yellow', paid:'badge-green' };
 const shippingCls     = { unshipped:'badge-muted', shipped:'badge-yellow', delivered:'badge-green' };
 const fgStatusCls     = { 'on-order':'badge-yellow', 'in-production':'badge-primary', shipped:'badge-green', received:'badge-green', sold:'badge-muted' };
+const billPaymentCls  = { unpaid:'badge-red', partial:'badge-yellow', paid:'badge-green', void:'badge-muted' };
+const billPaymentLabel = { unpaid:'Unpaid', partial:'Partial', paid:'Paid', void:'Void' };
+const billShipCls     = { open:'badge-muted', 'in-transit':'badge-yellow', received:'badge-green' };
+const billShipLabel   = { open:'Open', 'in-transit':'In Transit', received:'Received' };
+const computePayStatus = (bill) => {
+  if (bill.paymentStatus === 'void') return 'void';
+  const paid = bill.amountPaid || 0;
+  const amount = bill.amount || 0;
+  if (paid <= 0) return 'unpaid';
+  if (paid >= amount) return 'paid';
+  return 'partial';
+};
 
 const badgeStyle = {
   'badge-primary': { background:'hsl(220,70%,93%)', color:'hsl(220,70%,40%)', border:'1px solid hsl(220,70%,80%)' },
@@ -342,8 +354,8 @@ const badgeStyle = {
 };
 
 // ── UI Atoms ───────────────────────────────────────────────────────────────────
-const Badge = ({ cls, children }) => (
-  <span style={{ ...badgeStyle[cls]||badgeStyle['badge-muted'], padding:'2px 8px', borderRadius:4, fontSize:11, fontWeight:600, whiteSpace:'nowrap', display:'inline-block' }}>{children}</span>
+const Badge = ({ cls, children, style: sx }) => (
+  <span style={{ ...badgeStyle[cls]||badgeStyle['badge-muted'], padding:'2px 8px', borderRadius:4, fontSize:11, fontWeight:600, whiteSpace:'nowrap', display:'inline-block', ...sx }}>{children}</span>
 );
 
 const Card = ({ children, style: sx }) => (
@@ -932,8 +944,13 @@ function PODetail({ po, open, onClose, onBack }) {
   const saveBill = () => {
     const lineItems = billF.lineItems || [];
     const amount = lineItems.length > 0 ? billLineItemsTotal : (parseFloat(billF.amount)||existingBill.amount);
+    const amountPaid = parseFloat(billF.amountPaid) || 0;
+    const paymentStatus = billF.paymentStatus === 'void' ? 'void' : computePayStatus({ ...existingBill, ...billF, amount, amountPaid });
+    const shipmentStatus = billF.shipmentStatus || existingBill.shipmentStatus || 'open';
+    const receivedLocation = (billF.receivedLocation ?? existingBill?.receivedLocation ?? '').trim();
     updateBill(existingBill.id, {
-      status: billF.status, dueDate: billF.dueDate, amountPaid: parseFloat(billF.amountPaid)||0,
+      paymentStatus, shipmentStatus, receivedLocation: receivedLocation || undefined,
+      dueDate: billF.dueDate, amountPaid,
       memo: billF.memo, invoiceUrl: billF.invoiceUrl||undefined, lineItems, amount,
     });
     toast.success('Bill updated');
@@ -1064,16 +1081,37 @@ function PODetail({ po, open, onClose, onBack }) {
             </div>
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
-              <Field label="Status">
-                <Select value={billF.status||'open'} onChange={v => setBillF(p=>({...p,status:v}))}>
-                  <option value="open">Open</option>
-                  <option value="partial">Partial</option>
-                  <option value="paid">Paid</option>
-                  <option value="void">Void</option>
-                </Select>
+              <Field label="Payment Status">
+                <div style={{ display:'flex', alignItems:'center', gap:8, minHeight:36 }}>
+                  {(() => {
+                    const ps = billF.paymentStatus === 'void' ? 'void' : computePayStatus({ ...existingBill, ...billF, amountPaid: parseFloat(billF.amountPaid)||0 });
+                    return (
+                      <>
+                        <Badge cls={billPaymentCls[ps]||'badge-muted'}>{billPaymentLabel[ps]}</Badge>
+                        {ps !== 'void'
+                          ? <button type="button" onClick={() => setBillF(p=>({...p,paymentStatus:'void'}))} style={{ fontSize:10, color:'hsl(220,10%,56%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0 }}>Mark void</button>
+                          : <button type="button" onClick={() => setBillF(p=>({...p,paymentStatus:undefined}))} style={{ fontSize:10, color:'hsl(220,70%,45%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0 }}>Unvoid</button>}
+                      </>
+                    );
+                  })()}
+                </div>
               </Field>
               <Field label="Amount Paid ($)"><Input type="number" step="0.01" min="0" value={billF.amountPaid??''} onChange={e=>setBillF(p=>({...p,amountPaid:e.target.value}))} className="mono" /></Field>
               <Field label="Due Date"><Input type="date" value={billF.dueDate??''} onChange={e=>setBillF(p=>({...p,dueDate:e.target.value}))} /></Field>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:(billF.shipmentStatus||existingBill?.shipmentStatus||'open')==='received' ? '1fr 1fr' : '1fr 1fr 1fr', gap:12 }}>
+              <Field label="Shipment Status">
+                <Select value={billF.shipmentStatus||existingBill?.shipmentStatus||'open'} onChange={v => setBillF(p=>({...p,shipmentStatus:v}))}>
+                  <option value="open">Open</option>
+                  <option value="in-transit">In Transit</option>
+                  <option value="received">Received</option>
+                </Select>
+              </Field>
+              {(billF.shipmentStatus||existingBill?.shipmentStatus||'open') === 'received' && (
+                <Field label="Received Location">
+                  <Input value={billF.receivedLocation??existingBill?.receivedLocation??''} onChange={e=>setBillF(p=>({...p,receivedLocation:e.target.value}))} placeholder="e.g. Assembly Factory, Warehouse A…" />
+                </Field>
+              )}
             </div>
             <Field label="Memo"><Input value={billF.memo??''} onChange={e=>setBillF(p=>({...p,memo:e.target.value}))} /></Field>
 
@@ -1805,6 +1843,7 @@ function InventoryPage() {
     .filter(r => r.fgId)
     .map(r => {
       const fg = finishedGoods.find(f => f.id === r.fgId);
+      const unitCost = fg?.bom?.reduce((s,b) => { const p=parts.find(pt=>pt.id===b.partId); return s+(p?p.unitCost*b.qty:0); }, 0) || 0;
       return {
         id: r.id,
         type: 'fg',
@@ -1814,8 +1853,8 @@ function InventoryPage() {
         supplier: '—',
         location: r.location,
         qty: r.qty,
-        unitCost: fg?.bom?.reduce((s,b) => { const p=parts.find(pt=>pt.id===b.partId); return s+(p?p.unitCost*b.qty:0); }, 0) || 0,
-        value: 0,
+        unitCost,
+        value: r.qty * unitCost,
         status: r.fgStatus || (r.paidFor ? 'received' : 'on-order'),
         date: r.dateReceived,
         fgSkus: fg ? [fg.sku] : [],
@@ -3258,7 +3297,7 @@ function WODetail({ wo, open, onClose }) {
               <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,70%,45%)', marginBottom:10 }}>Journal Flow</div>
               {[
                 { step:'1', label:'On Release', entry:'Components DR→CR  /  WIP DR', done: wo.status !== 'draft', amt: fmt(componentCost) },
-                { step:'2', label:'Assembly Invoice', entry:'Assembly Fee DR  /  AP CR', done: ['assembly-invoiced','completed'].includes(wo.status), amt: fmt(wo.assemblyFee||0) },
+                { step:'2', label:'Assembly Invoice', entry:'Assembly Fee DR  /  AP CR', done: ['assembly-invoiced','completed'].includes(wo.status), amt: fmt(serviceCost) },
                 { step:'3', label:'On Completion', entry:'WIP CR  /  FG Inventory DR', done: wo.status === 'completed', amt: fmt(totalWIPCost) },
               ].map((s,i) => (
                 <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'6px 0', borderBottom: i < 2 ? '1px solid hsl(220,70%,90%)' : 'none' }}>
@@ -3405,7 +3444,7 @@ function WorkOrdersPage() {
   const [selected, setSelected]     = useState(null);
 
   const totalInWIP      = workOrders.filter(w => ['released','assembly-invoiced'].includes(w.status));
-  const wipValue        = totalInWIP.reduce((s,w) => s + w.bomLines.reduce((ss,l) => ss + l.qty * l.unitCost, 0) + (w.assemblyFee||0), 0);
+  const wipValue        = totalInWIP.reduce((s,w) => s + w.bomLines.reduce((ss,l) => ss + l.qty * l.unitCost, 0), 0);
   const completed       = workOrders.filter(w => w.status === 'completed');
   const completedUnits  = completed.reduce((s,w) => s + w.qtyOrdered, 0);
 
@@ -3445,8 +3484,9 @@ function WorkOrdersPage() {
               </thead>
               <tbody>
                 {[...workOrders].sort((a,b) => statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status)).map(wo => {
-                  const compCost = wo.bomLines.reduce((s,l) => s + l.qty * l.unitCost, 0);
-                  const total    = compCost + (wo.assemblyFee||0);
+                  const compCost = wo.bomLines.filter(l => l.partType !== 'service').reduce((s,l) => s + l.qty * l.unitCost, 0);
+                  const svcCost  = wo.bomLines.filter(l => l.partType === 'service').reduce((s,l) => s + l.qty * l.unitCost, 0);
+                  const total    = compCost + svcCost;
                   const unit     = wo.qtyOrdered > 0 ? total / wo.qtyOrdered : 0;
                   return (
                     <tr key={wo.id} style={{ cursor:'pointer' }}
@@ -3458,7 +3498,7 @@ function WorkOrdersPage() {
                       <TD><Badge cls={woStatusCls[wo.status]}>{woStatusLabel[wo.status]}</Badge></TD>
                       <TD right mono>{wo.qtyOrdered}</TD>
                       <TD right mono>{fmt(compCost)}</TD>
-                      <TD right mono>{wo.assemblyFee > 0 ? fmt(wo.assemblyFee) : <span style={{ color:'hsl(220,15%,70%)' }}>—</span>}</TD>
+                      <TD right mono>{svcCost > 0 ? fmt(svcCost) : <span style={{ color:'hsl(220,15%,70%)' }}>—</span>}</TD>
                       <TD right mono bold>{fmt(total)}</TD>
                       <TD right mono>{fmt(unit)}</TD>
                       <TD muted>{wo.dateOrdered}</TD>
@@ -3479,7 +3519,30 @@ function WorkOrdersPage() {
 
 // ── Bills Page ────────────────────────────────────────────────────────────────
 function BillsPage() {
-  const { bills, updateBill, deleteBill, addBill, purchaseOrders, suppliers, getSupplierById, finishedGoods, getPartById, workOrders, addWorkOrder } = useData();
+  const { bills, updateBill, deleteBill, addBill, purchaseOrders, suppliers, getSupplierById, parts, finishedGoods, getPartById, workOrders, addWorkOrder, inventoryRecords, addInventoryRecord, updateInventoryRecord } = useData();
+
+  // When a bill is saved with shipmentStatus='received', upsert inventory at the given location
+  const updateInventoryOnReceived = (lineItems, location) => {
+    lineItems.forEach(item => {
+      const sku = (item.sku || '').trim();
+      if (!sku) return;
+      const matchPart = parts.find(p => p.sku === sku);
+      const matchFG   = !matchPart && finishedGoods.find(fg => fg.sku === sku);
+      const entityId  = matchPart?.id || matchFG?.id;
+      if (!entityId) return;
+      const qty = parseFloat(item.qty) || 0;
+      const existing = matchPart
+        ? inventoryRecords.find(r => r.partId === entityId && r.location === location)
+        : inventoryRecords.find(r => r.fgId === entityId && r.location === location);
+      if (existing) {
+        updateInventoryRecord(existing.id, { qty: (existing.qty || 0) + qty });
+      } else if (matchPart) {
+        addInventoryRecord({ partId: entityId, location, qty, paidFor: true, dateReceived: today() });
+      } else {
+        addInventoryRecord({ fgId: entityId, partId: null, location, qty, paidFor: true, dateReceived: today() });
+      }
+    });
+  };
   const [selected, setSelected] = useState(null);
   const [f, setF] = useState({});
   const [woFromBill, setWoFromBill] = useState(null); // bill to pre-fill WO from
@@ -3493,7 +3556,7 @@ function BillsPage() {
   const PO_PAGE_SIZE = 10;
 
   const openNewBill = () => {
-    setNewBill({ status:'open', amountPaid:0, dueDate:'', memo:'', dateCreated:today(), lineItems:[] });
+    setNewBill({ shipmentStatus:'open', paymentStatus:'unpaid', amountPaid:0, dueDate:'', memo:'', dateCreated:today(), lineItems:[] });
     setShowPoPicker(false);
     setPoPickerPage(0);
     setCreatingNew(true);
@@ -3533,7 +3596,13 @@ function BillsPage() {
   const saveNewBill = () => {
     const lineItems = newBill.lineItems || [];
     const amount = lineItems.length > 0 ? newLineItemsTotal : (parseFloat(newBill.amount)||0);
-    addBill({ ...newBill, amount });
+    const amountPaid = parseFloat(newBill.amountPaid) || 0;
+    const paymentStatus = computePayStatus({ ...newBill, amount, amountPaid });
+    const shipmentStatus = newBill.shipmentStatus || 'open';
+    const receivedLocation = newBill.receivedLocation || '';
+    addBill({ ...newBill, amount, paymentStatus, shipmentStatus, receivedLocation: receivedLocation || undefined });
+    if (shipmentStatus === 'received' && receivedLocation && lineItems.length > 0)
+      updateInventoryOnReceived(lineItems, receivedLocation);
     closeNewBill();
     toast.success('Bill created');
   };
@@ -3555,10 +3624,21 @@ function BillsPage() {
 
   const save = () => {
     const lineItems = f.lineItems || [];
-    // If there are line items, derive the bill amount from them
     const amount = lineItems.length > 0 ? lineItemsTotal : (parseFloat(f.amount)||selected.amount);
+    const amountPaid = parseFloat(f.amountPaid) || 0;
+    // paymentStatus: auto-computed unless manually voided
+    const paymentStatus = f.paymentStatus === 'void' ? 'void' : computePayStatus({ ...f, amount, amountPaid });
+    const shipmentStatus = f.shipmentStatus || 'open';
+    const receivedLocation = (f.receivedLocation || '').trim();
+    // If newly transitioning to received, update inventory records
+    const wasReceived = selected.shipmentStatus === 'received';
+    if (shipmentStatus === 'received' && !wasReceived && receivedLocation) {
+      const itemsToReceive = lineItems.length > 0 ? lineItems : (selected.lineItems || []);
+      if (itemsToReceive.length > 0) updateInventoryOnReceived(itemsToReceive, receivedLocation);
+    }
     updateBill(selected.id, {
-      status: f.status, dueDate: f.dueDate, amountPaid: parseFloat(f.amountPaid)||0,
+      paymentStatus, shipmentStatus, receivedLocation: receivedLocation || undefined,
+      dueDate: f.dueDate, amountPaid,
       memo: f.memo, invoiceUrl: f.invoiceUrl||undefined,
       lineItems: lineItems.length > 0 ? lineItems : undefined,
       amount,
@@ -3578,13 +3658,13 @@ function BillsPage() {
     const total = bill.lineItems?.length > 0
       ? bill.lineItems.reduce((s,l) => s + (l.qty||0)*(l.unitPrice||0), 0)
       : bill.amount;
-    updateBill(bill.id, { status:'paid', amountPaid: total, amount: total });
+    updateBill(bill.id, { paymentStatus:'paid', amountPaid: total, amount: total });
     toast.success('Bill marked paid');
   };
 
-  const billStatusCls = { open:'badge-yellow', partial:'badge-primary', paid:'badge-green', void:'badge-muted' };
-  const totalOpen = bills.filter(b => b.status !== 'paid' && b.status !== 'void').reduce((s,b) => s + (b.amount - (b.amountPaid||0)), 0);
-  const totalPaid = bills.filter(b => b.status === 'paid').reduce((s,b) => s + b.amount, 0);
+  const totalOpen = bills.filter(b => { const s=computePayStatus(b); return s!=='paid'&&s!=='void'; }).reduce((s,b) => s + (b.amount - (b.amountPaid||0)), 0);
+  const totalPaid = bills.filter(b => computePayStatus(b)==='paid').reduce((s,b) => s + b.amount, 0);
+  const totalInTransit = bills.filter(b => b.shipmentStatus==='in-transit').reduce((s,b) => s + b.amount, 0);
 
   const po = selected ? purchaseOrders.find(p => p.id === selected.poId) : null;
   const supplier = selected ? getSupplierById(selected.supplierId) : null;
@@ -3599,8 +3679,9 @@ function BillsPage() {
         <Btn onClick={openNewBill}>+ New Vendor Bill</Btn>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:16 }}>
         <StatCard title="Open / Unpaid" value={fmt(totalOpen)} icon={Icons.Dollar} variant="warning" />
+        <StatCard title="In Transit" value={fmt(totalInTransit)} icon={Icons.Truck} variant="info" />
         <StatCard title="Paid" value={fmt(totalPaid)} icon={Icons.Dollar} variant="success" />
         <StatCard title="Total Bills" value={`${bills.length}`} icon={Icons.Clipboard} />
       </div>
@@ -3617,7 +3698,7 @@ function BillsPage() {
             <table>
               <thead>
                 <tr style={{ background:'hsl(220,15%,96%)' }}>
-                  <TH>Bill #</TH><TH>PO #</TH><TH>Supplier</TH><TH>Status</TH><TH right>Amount</TH><TH right>Paid</TH><TH right>Balance</TH><TH>Created</TH><TH>Due</TH><TH>Invoice</TH>
+                  <TH>Bill #</TH><TH>PO #</TH><TH>Supplier</TH><TH>Payment</TH><TH>Shipment</TH><TH right>Amount</TH><TH right>Paid</TH><TH right>Balance</TH><TH>Created</TH><TH>Due</TH><TH>Invoice</TH>
                 </tr>
               </thead>
               <tbody>
@@ -3632,7 +3713,8 @@ function BillsPage() {
                       <TD><span className="mono" style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)' }}>BILL-{String(bills.length - i).padStart(3,'0')}</span></TD>
                       <TD><span className="mono" style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>{bill.poNumber}</span></TD>
                       <TD>{sup?.shortName || '—'}</TD>
-                      <TD><Badge cls={billStatusCls[bill.status]||'badge-muted'}>{bill.status}</Badge></TD>
+                      <TD><Badge cls={billPaymentCls[computePayStatus(bill)]||'badge-muted'}>{billPaymentLabel[computePayStatus(bill)]}</Badge></TD>
+                      <TD><Badge cls={billShipCls[bill.shipmentStatus||'open']}>{billShipLabel[bill.shipmentStatus||'open']}</Badge></TD>
                       <TD right mono bold>{fmt(bill.amount)}</TD>
                       <TD right mono>{fmt(bill.amountPaid||0)}</TD>
                       <TD right mono><span style={{ color: balance > 0 ? 'hsl(38,80%,35%)' : 'hsl(160,60%,35%)' }}>{fmt(balance)}</span></TD>
@@ -3656,10 +3738,11 @@ function BillsPage() {
               <tfoot>
                 <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
                   <td colSpan={4} style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
+                  <td/>
                   <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(bills.reduce((s,b)=>s+b.amount,0))}</td>
                   <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(bills.reduce((s,b)=>s+(b.amountPaid||0),0))}</td>
                   <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(38,80%,35%)' }}>{fmt(totalOpen)}</td>
-                  <td colSpan={2}/>
+                  <td colSpan={3}/>
                 </tr>
               </tfoot>
             </table>
@@ -3750,17 +3833,48 @@ function BillsPage() {
               </table>
             </div>
 
+            {/* Payment + amount row */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
-              <Field label="Status">
-                <Select value={f.status||'open'} onChange={v => setF(p=>({...p,status:v}))}>
-                  <option value="open">Open</option>
-                  <option value="partial">Partial</option>
-                  <option value="paid">Paid</option>
-                  <option value="void">Void</option>
-                </Select>
+              <Field label="Payment Status">
+                <div style={{ display:'flex', alignItems:'center', gap:8, minHeight:36 }}>
+                  {(() => {
+                    const ps = f.paymentStatus === 'void' ? 'void' : computePayStatus({ ...selected, ...f, amountPaid: parseFloat(f.amountPaid)||0 });
+                    return (
+                      <>
+                        <Badge cls={billPaymentCls[ps]||'badge-muted'} style={{ flexShrink:0 }}>{billPaymentLabel[ps]}</Badge>
+                        {ps !== 'void' ? (
+                          <button type="button" onClick={() => setF(p=>({...p,paymentStatus:'void'}))}
+                            style={{ fontSize:10, color:'hsl(220,10%,56%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0, whiteSpace:'nowrap' }}>
+                            Mark void
+                          </button>
+                        ) : (
+                          <button type="button" onClick={() => setF(p=>({...p,paymentStatus:undefined}))}
+                            style={{ fontSize:10, color:'hsl(220,70%,45%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0, whiteSpace:'nowrap' }}>
+                            Unvoid
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
               </Field>
               <Field label="Amount Paid ($)"><Input type="number" step="0.01" min="0" {...fld('amountPaid')} className="mono" /></Field>
               <Field label="Due Date"><Input type="date" {...fld('dueDate')} /></Field>
+            </div>
+            {/* Shipment status row */}
+            <div style={{ display:'grid', gridTemplateColumns:(f.shipmentStatus||selected?.shipmentStatus||'open')==='received' ? '1fr 1fr' : '1fr 1fr 1fr', gap:12 }}>
+              <Field label="Shipment Status">
+                <Select value={f.shipmentStatus||selected?.shipmentStatus||'open'} onChange={v => setF(p=>({...p,shipmentStatus:v}))}>
+                  <option value="open">Open</option>
+                  <option value="in-transit">In Transit</option>
+                  <option value="received">Received</option>
+                </Select>
+              </Field>
+              {(f.shipmentStatus||selected?.shipmentStatus||'open') === 'received' && (
+                <Field label="Received Location">
+                  <Input value={f.receivedLocation??selected?.receivedLocation??''} onChange={e => setF(p=>({...p,receivedLocation:e.target.value}))} placeholder="e.g. Assembly Factory, Warehouse A…" />
+                </Field>
+              )}
             </div>
             <Field label="Memo"><Input {...fld('memo')} /></Field>
 
@@ -3812,7 +3926,7 @@ function BillsPage() {
                     ? <span style={{ fontSize:12, color:'hsl(160,60%,35%)', fontWeight:500, display:'flex', alignItems:'center' }}>✓ WO: {linkedWO.woNumber}</span>
                     : <Btn variant="outline" onClick={() => { setWoFromBill(selected); closeBill(); }}>Create WO</Btn>;
                 })()}
-                <Btn variant="outline" onClick={() => { const tot = (f.lineItems||[]).length > 0 ? lineItemsTotal : selected.amount; setF(p=>({...p,status:'paid',amountPaid:tot})); }}>Mark Paid</Btn>
+                <Btn variant="outline" onClick={() => { const tot = (f.lineItems||[]).length > 0 ? lineItemsTotal : selected.amount; setF(p=>({...p,amountPaid:tot,paymentStatus:undefined})); }}>Mark Paid</Btn>
                 <Btn onClick={save}>Save Changes</Btn>
               </div>
             </div>
@@ -3971,16 +4085,30 @@ function BillsPage() {
               </div>
 
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
-                <Field label="Status">
-                  <Select value={newBill.status||'open'} onChange={v => setNewBill(p=>({...p,status:v}))}>
-                    <option value="open">Open</option>
-                    <option value="partial">Partial</option>
-                    <option value="paid">Paid</option>
-                    <option value="void">Void</option>
-                  </Select>
+                <Field label="Payment Status">
+                  <div style={{ display:'flex', alignItems:'center', gap:8, minHeight:36 }}>
+                    {(() => {
+                      const ps = computePayStatus({ ...newBill, amountPaid: parseFloat(newBill.amountPaid)||0 });
+                      return <Badge cls={billPaymentCls[ps]||'badge-muted'}>{billPaymentLabel[ps]}</Badge>;
+                    })()}
+                  </div>
                 </Field>
                 <Field label="Amount Paid ($)"><Input type="number" step="0.01" min="0" {...newBillFld('amountPaid')} className="mono" /></Field>
                 <Field label="Due Date"><Input type="date" {...newBillFld('dueDate')} /></Field>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:(newBill?.shipmentStatus||'open')==='received' ? '1fr 1fr' : '1fr 1fr 1fr', gap:12 }}>
+                <Field label="Shipment Status">
+                  <Select value={newBill?.shipmentStatus||'open'} onChange={v => setNewBill(p=>({...p,shipmentStatus:v}))}>
+                    <option value="open">Open</option>
+                    <option value="in-transit">In Transit</option>
+                    <option value="received">Received</option>
+                  </Select>
+                </Field>
+                {(newBill?.shipmentStatus||'open') === 'received' && (
+                  <Field label="Received Location">
+                    <Input value={newBill?.receivedLocation||''} onChange={e => setNewBill(p=>({...p,receivedLocation:e.target.value}))} placeholder="e.g. Assembly Factory, Warehouse A…" />
+                  </Field>
+                )}
               </div>
               <Field label="Memo"><Input {...newBillFld('memo')} /></Field>
 
@@ -4128,7 +4256,7 @@ function GlobalSearch({ setPage, onResult }) {
   return (
     <div style={{ padding:'8px 8px 0', position:'relative' }}>
       <div style={{ position:'relative' }}>
-        <Icons.Search size={13} color="hsl(220,15%,45%)" style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}><Icons.Search size={13} color="hsl(220,15%,45%)" /></div>
         <input
           ref={inputRef}
           value={query}

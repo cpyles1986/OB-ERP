@@ -4978,11 +4978,15 @@ export default function App() {
             <div style={{ padding: collapsed ? '16px 0' : '20px 16px', borderBottom:'1px solid hsl(220,20%,18%)' }}>
               {!collapsed ? (
                 <div>
-                  <div style={{ fontSize:17, fontWeight:700, color:'white', letterSpacing:'-0.3px' }}>OneBlade</div>
-                  <div style={{ fontSize:11, color:'hsl(220,15%,50%)', marginTop:3 }}>Inventory & COGS Tracker</div>
+                  <img src={import.meta.env.BASE_URL + 'oneblade-logo.png'} alt="OneBlade"
+                    style={{ height:28, width:'auto', filter:'brightness(0) invert(1)', display:'block' }} />
+                  <div style={{ fontSize:11, color:'hsl(220,15%,50%)', marginTop:6 }}>Supply Chain Manager</div>
                 </div>
               ) : (
-                <div style={{ display:'flex', justifyContent:'center' }}><Icons.Dollar size={18} color="hsl(220,70%,60%)" /></div>
+                <div style={{ display:'flex', justifyContent:'center' }}>
+                  <img src={import.meta.env.BASE_URL + 'oneblade-logo.png'} alt="OneBlade"
+                    style={{ height:20, width:'auto', filter:'brightness(0) invert(1)' }} />
+                </div>
               )}
             </div>
 

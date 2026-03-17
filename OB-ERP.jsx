@@ -916,6 +916,142 @@ function PODetail({ po, open, onClose, onBack }) {
     onClose();
   };
 
+  const handleDownloadPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+      const W = 612, margin = 50;
+      const fmtDate = d => { if (!d) return '—'; const [y,m,day] = d.split('-'); const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${months[+m-1]} ${+day}, ${y}`; };
+      const fmtUSD = n => `$${(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+      const statusLabel = { draft:'Draft', 'pending-approval':'Pending Approval', approved:'Approved', submitted:'Submitted to Supplier' };
+
+      // Logo (top-right)
+      try {
+        const img = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = import.meta.env.BASE_URL + 'oneblade-logo.png'; });
+        const logoW = 160, logoH = Math.round(logoW * 536 / 2738);
+        doc.addImage(img, 'PNG', W - margin - logoW, margin - 8, logoW, logoH);
+      } catch (_) {
+        doc.setFont('helvetica','bold').setFontSize(14).text('ONEBLADE', W - margin, margin + 8, { align:'right' });
+      }
+
+      // Header: "PURCHASE ORDER"
+      doc.setFont('helvetica','bold').setFontSize(22).setTextColor(20, 20, 20);
+      doc.text('PURCHASE ORDER', margin, margin + 18);
+
+      // PO number + date + status under title
+      let y = margin + 38;
+      doc.setFont('helvetica','normal').setFontSize(10).setTextColor(80, 80, 80);
+      doc.text(`PO Number:`, margin, y);
+      doc.setFont('helvetica','bold').setTextColor(20,20,20);
+      doc.text(po.poNumber, margin + 72, y);
+      y += 16;
+      doc.setFont('helvetica','normal').setTextColor(80,80,80);
+      doc.text(`Date:`, margin, y);
+      doc.setFont('helvetica','normal').setTextColor(20,20,20);
+      doc.text(fmtDate(po.dateOrdered), margin + 72, y);
+      y += 16;
+      doc.setFont('helvetica','normal').setTextColor(80,80,80);
+      doc.text(`Status:`, margin, y);
+      doc.setFont('helvetica','bold').setTextColor(20,20,20);
+      doc.text(statusLabel[po.orderStatus] || po.orderStatus, margin + 72, y);
+
+      // Divider
+      y += 24;
+      doc.setDrawColor(200,200,200).setLineWidth(0.5).line(margin, y, W - margin, y);
+      y += 20;
+
+      // Two-column: Vendor (left) | Bill To (right)
+      const col2 = W / 2 + 10;
+      doc.setFont('helvetica','bold').setFontSize(9).setTextColor(100,100,100);
+      doc.text('SUPPLIER', margin, y);
+      doc.text('BILL TO', col2, y);
+      y += 14;
+      doc.setFont('helvetica','bold').setFontSize(11).setTextColor(20,20,20);
+      doc.text(supplier?.name || '—', margin, y);
+      doc.text('OneBlade, Inc.', col2, y);
+      y += 14;
+      doc.setFont('helvetica','normal').setFontSize(10);
+      const vendorLines = [
+        supplier?.address,
+        [supplier?.city, supplier?.country].filter(Boolean).join(', '),
+        supplier?.email,
+        supplier?.phone,
+      ].filter(Boolean);
+      vendorLines.forEach(line => { doc.text(line, margin, y); y += 13; });
+
+      // Divider
+      y += 10;
+      doc.setDrawColor(200,200,200).line(margin, y, W - margin, y);
+      y += 16;
+
+      // Items table — columns (left-aligned: num/desc/sku; right-aligned: qty/unit/total)
+      // Right edge of page content = W - margin = 562
+      const C = { num: margin, desc: margin+22, sku: 272, qty: 388, unit: 476, total: W-margin };
+      const tableW = W - margin*2;
+
+      doc.setFillColor(245,245,247).rect(margin, y-10, tableW, 22, 'F');
+      doc.setFont('helvetica','bold').setFontSize(9).setTextColor(60,60,60);
+      doc.text('#',           C.num,   y+4);
+      doc.text('Description', C.desc,  y+4);
+      doc.text('SKU',         C.sku,   y+4);
+      doc.text('Qty',         C.qty,   y+4, { align:'right' });
+      doc.text('Unit Cost',   C.unit,  y+4, { align:'right' });
+      doc.text('Total',       C.total, y+4, { align:'right' });
+      y += 22;
+
+      // Items rows
+      doc.setFont('helvetica','normal').setFontSize(10).setTextColor(20,20,20);
+      po.items.forEach((item, idx) => {
+        const name = item.partId ? (getPartById(item.partId)?.name || '—') : (finishedGoods.find(f=>f.id===item.fgId)?.name || item.fgSku || '—');
+        const sku  = item.partId ? (getPartById(item.partId)?.sku || '—') : (item.fgSku || '—');
+        const rowTotal = (item.qty||0) * (item.unitCost||0);
+        doc.setTextColor(80,80,80).text(String(idx+1), C.num, y+2);
+        doc.setTextColor(20,20,20);
+        const descStr = doc.splitTextToSize(name, C.sku - C.desc - 8)[0] || name;
+        doc.text(descStr, C.desc, y+2);
+        doc.setTextColor(80,80,80).setFontSize(9);
+        const skuStr = doc.splitTextToSize(sku, C.qty - C.sku - 8)[0] || sku;
+        doc.text(skuStr, C.sku, y+2);
+        doc.setFontSize(10).setTextColor(20,20,20);
+        doc.text(String(item.qty||0), C.qty,   y+2, { align:'right' });
+        doc.text(fmtUSD(item.unitCost), C.unit, y+2, { align:'right' });
+        doc.setFont('helvetica','bold').text(fmtUSD(rowTotal), C.total, y+2, { align:'right' });
+        doc.setFont('helvetica','normal');
+        y += 20;
+      });
+
+      // Total row
+      y += 8;
+      doc.setFont('helvetica','bold').setFontSize(11).setTextColor(20,20,20);
+      doc.text('Total', C.unit, y+6, { align:'right' });
+      doc.setFontSize(13).text(fmtUSD(po.totalCost), C.total, y+6, { align:'right' });
+
+      // Notes
+      if (po.notes) {
+        y += 32;
+        doc.setDrawColor(220,220,220).line(margin, y-4, W-margin, y-4);
+        y += 10;
+        doc.setFont('helvetica','bold').setFontSize(9).setTextColor(100,100,100).text('NOTES', margin, y);
+        y += 13;
+        doc.setFont('helvetica','normal').setFontSize(10).setTextColor(40,40,40);
+        const noteLines = doc.splitTextToSize(po.notes, W - margin*2);
+        doc.text(noteLines, margin, y);
+      }
+
+      // Footer
+      doc.setFont('helvetica','normal').setFontSize(8).setTextColor(160,160,160);
+      doc.text('Generated by OneBlade ERP', margin, 760);
+      doc.text(`Printed ${fmtDate(new Date().toISOString().slice(0,10))}`, W-margin, 760, { align:'right' });
+
+      doc.save(`${po.poNumber}.pdf`);
+      toast.success(`${po.poNumber}.pdf downloaded`);
+    } catch(err) {
+      console.error('PDF error', err);
+      toast.error('PDF generation failed');
+    }
+  };
+
   const handleCreateBill = () => {
     if (existingBill) { toast.error('A bill already exists for this PO'); return; }
     // Auto-populate bill line items from PO line items
@@ -1221,7 +1357,7 @@ function PODetail({ po, open, onClose, onBack }) {
         <Separator />
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>
-            {existingBill ? 'Vendor Bill:' : 'No bill created yet'}
+            {existingBill ? 'Supplier Bill:' : 'No bill created yet'}
           </div>
           {existingBill ? (
             <button onClick={openBillView} style={{
@@ -1235,7 +1371,7 @@ function PODetail({ po, open, onClose, onBack }) {
               {billNumber} →
             </button>
           ) : (
-            <Btn variant="outline" size="sm" onClick={handleCreateBill}>Create Vendor Bill</Btn>
+            <Btn variant="outline" size="sm" onClick={handleCreateBill}>Create Supplier Bill</Btn>
           )}
         </div>
 
@@ -1251,6 +1387,9 @@ function PODetail({ po, open, onClose, onBack }) {
             Delete PO
           </button>
           <div style={{ display:'flex', gap:8 }}>
+            {(po.orderStatus === 'approved' || po.orderStatus === 'submitted') && (
+              <Btn variant="outline" size="sm" onClick={handleDownloadPDF}>⬇ Download PDF</Btn>
+            )}
             {po.orderStatus === 'submitted' && (
               <Btn variant="outline" size="sm" onClick={handleReturnToDraft}>↩ Return to Draft</Btn>
             )}
@@ -1634,12 +1773,12 @@ function Dashboard({ setPage }) {
           </Card>
         </div>
 
-        {/* PO vs Vendor Bill delta */}
+        {/* PO vs Supplier Bill delta */}
         <div onClick={e => { e.stopPropagation(); }} style={{ cursor:'default' }}>
           <Card>
             <CardHeader>
               <CardTitle style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span><Icons.Dollar size={15} /> PO vs. Vendor Bill</span>
+                <span><Icons.Dollar size={15} /> PO vs. Supplier Bill</span>
                 <span
                   onClick={() => setPage('bills')}
                   style={{ fontSize:11, color:'hsl(220,70%,45%)', fontWeight:600, cursor:'pointer' }}>
@@ -3615,6 +3754,19 @@ function BillsPage() {
   const [f, setF] = useState({});
   const [woFromBill, setWoFromBill] = useState(null); // bill to pre-fill WO from
   const fld = k => ({ value: f[k]??'', onChange: e => setF(p=>({...p,[k]:e.target.value})) });
+  const fileInputRef = useRef(null);
+  const handleAttachment = e => {
+    const file = e.target.files?.[0];
+    if (!file || !selected) return;
+    if (file.size > 10 * 1024 * 1024) { toast.error('File too large (max 10 MB)'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      updateBill(selected.id, { attachmentData: ev.target.result, attachmentName: file.name, attachmentType: file.type });
+      toast.success('Attachment saved');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   // ── New bill creation state ──
   const [creatingNew, setCreatingNew]   = useState(false);
@@ -3707,7 +3859,7 @@ function BillsPage() {
     updateBill(selected.id, {
       paymentStatus, shipmentStatus, receivedLocation: receivedLocation || undefined,
       dueDate: f.dueDate, amountPaid,
-      memo: f.memo, invoiceUrl: f.invoiceUrl||undefined,
+      memo: f.memo,
       lineItems: lineItems.length > 0 ? lineItems : undefined,
       amount,
     });
@@ -3741,10 +3893,10 @@ function BillsPage() {
     <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>Vendor Bills</div>
+          <div style={{ fontSize:22, fontWeight:700 }}>Supplier Bills</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>Create bills manually from any PO · Click to edit and mark paid</div>
         </div>
-        <Btn onClick={openNewBill}>+ New Vendor Bill</Btn>
+        <Btn onClick={openNewBill}>+ New Supplier Bill</Btn>
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:16 }}>
@@ -3760,7 +3912,7 @@ function BillsPage() {
             <div style={{ padding:'60px 20px', textAlign:'center', color:'hsl(220,10%,56%)' }}>
               <div style={{ fontSize:32, marginBottom:12 }}>🧾</div>
               <div style={{ fontSize:15, fontWeight:600, marginBottom:6 }}>No bills yet</div>
-              <div style={{ fontSize:13 }}>Open any Purchase Order and click <strong>Create Vendor Bill</strong> at the bottom to generate a bill.</div>
+              <div style={{ fontSize:13 }}>Open any Purchase Order and click <strong>Create Supplier Bill</strong> at the bottom to generate a bill.</div>
             </div>
           ) : (
             <table>
@@ -3949,28 +4101,29 @@ function BillsPage() {
             {/* Invoice attachment */}
             <div style={{ borderTop:'1px solid hsl(220,15%,90%)', paddingTop:14 }}>
               <div style={{ fontSize:12, fontWeight:700, color:'hsl(220,10%,56%)', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>Invoice Attachment</div>
-              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                <div style={{ flex:1 }}>
-                  <Input
-                    {...fld('invoiceUrl')}
-                    placeholder="Paste Google Drive link to supplier invoice PDF…"
-                  />
-                </div>
-                {f.invoiceUrl && (
-                  <a href={f.invoiceUrl} target="_blank" rel="noopener noreferrer"
-                    style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, fontWeight:600,
-                      color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)',
-                      borderRadius:6, padding:'7px 12px', textDecoration:'none', whiteSpace:'nowrap' }}
-                    onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,90%)'}
-                    onMouseLeave={e => e.currentTarget.style.background='hsl(220,70%,96%)'}>
-                    📄 Open PDF ↗
+              <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.docx,.doc" style={{ display:'none' }} onChange={handleAttachment} />
+              {selected?.attachmentName ? (
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <div style={{ flex:1, fontSize:12, color:'hsl(220,10%,40%)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    📎 {selected.attachmentName}
+                  </div>
+                  <a href={selected.attachmentData} download={selected.attachmentName}
+                    style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:6, padding:'6px 12px', textDecoration:'none', whiteSpace:'nowrap' }}>
+                    View ↗
                   </a>
-                )}
-              </div>
-              {!f.invoiceUrl && (
-                <div style={{ fontSize:11, color:'hsl(220,15%,65%)', marginTop:5 }}>
-                  Share the file in Google Drive → Copy link → paste above
+                  <button onClick={() => updateBill(selected.id, { attachmentData:undefined, attachmentName:undefined, attachmentType:undefined })}
+                    style={{ fontSize:12, color:'hsl(0,72%,51%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                    Remove
+                  </button>
                 </div>
+              ) : (
+                <>
+                  <button onClick={() => fileInputRef.current?.click()}
+                    style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:6, padding:'7px 14px', cursor:'pointer', fontFamily:'inherit' }}>
+                    + Add Attachment
+                  </button>
+                  <div style={{ fontSize:11, color:'hsl(220,15%,65%)', marginTop:6 }}>PDF, PNG, JPG, DOCX supported · max 10 MB</div>
+                </>
               )}
             </div>
 
@@ -4005,9 +4158,9 @@ function BillsPage() {
       {/* Create WO from Bill dialog */}
       <CreateWOFromBillDialog bill={woFromBill} onClose={() => setWoFromBill(null)} />
 
-      {/* ── New Vendor Bill modal ── */}
+      {/* ── New Supplier Bill modal ── */}
       <Modal
-        title={showPoPicker ? '' : 'New Vendor Bill'}
+        title={showPoPicker ? '' : 'New Supplier Bill'}
         open={creatingNew}
         onClose={closeNewBill}
         wide
@@ -4034,7 +4187,7 @@ function BillsPage() {
                     <tr style={{ background:'hsl(220,15%,96%)' }}>
                       <th style={{ padding:'8px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'left' }}>PO #</th>
                       <th style={{ padding:'8px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'left' }}>Date</th>
-                      <th style={{ padding:'8px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'left' }}>Vendor</th>
+                      <th style={{ padding:'8px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'left' }}>Supplier</th>
                       <th style={{ padding:'8px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'right' }}>Total</th>
                     </tr>
                   </thead>
@@ -4375,7 +4528,7 @@ function GlobalSearch({ setPage, onResult }) {
 const navItems = [
   { id:'dashboard',   label:'Dashboard',       Icon: Icons.Dashboard },
   { id:'pos',         label:'Purchase Orders', Icon: Icons.Clipboard },
-  { id:'bills',       label:'Vendor Bills',    Icon: Icons.Dollar    },
+  { id:'bills',       label:'Supplier Bills',    Icon: Icons.Dollar    },
   { id:'workorders',  label:'Work Orders',     Icon: Icons.Layers    },
   { id:'inventory',   label:'Inventory',       Icon: Icons.Package   },
   { id:'bom',         label:'BOM & COGS',      Icon: Icons.Layers    },

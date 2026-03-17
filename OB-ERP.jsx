@@ -47,8 +47,8 @@ const initialInventory = [
 ];
 
 const initialPOs = [
-  { id:'po-1', poNumber:'PO-2026-001', supplierId:'sup-zinc',    orderStatus:'submitted', paymentStatus:'unpaid', shippingStatus:'unshipped', dateOrdered:'2026-03-10', items:[{partId:'part1', qty:500,  unitCost:2.00}],                                          totalCost:1000  },
-  { id:'po-2', poNumber:'PO-2026-002', supplierId:'sup-factory', orderStatus:'submitted', paymentStatus:'unpaid', shippingStatus:'unshipped', dateOrdered:'2026-03-10', items:[{fgId:'fg-element-b', fgSku:'ELEMENT-B_10BLD', qty:1000, unitCost:13.92}], totalCost:13920 },
+  { id:'po-1', poNumber:'PO-2026-001', supplierId:'sup-zinc',    orderStatus:'submitted', dateOrdered:'2026-03-10', items:[{partId:'part1', qty:500,  unitCost:2.00}],                                          totalCost:1000  },
+  { id:'po-2', poNumber:'PO-2026-002', supplierId:'sup-factory', orderStatus:'submitted', dateOrdered:'2026-03-10', items:[{fgId:'fg-element-b', fgSku:'ELEMENT-B_10BLD', qty:1000, unitCost:13.92}], totalCost:13920 },
 ];
 
 // ── Chart of Accounts ──────────────────────────────────────────────────────────
@@ -204,6 +204,7 @@ function DataProvider({ children }) {
   const addPart             = useCallback(pt => setParts(p     => [...p, { ...pt, id: nid('part') }]), []);
   const addFinishedGood     = useCallback(fg => setFGs(p       => [...p, { ...fg, id: nid('fg')   }]), []);
   const addPurchaseOrder    = useCallback(po => setPOs(p       => [...p, { ...po, id: nid('po')   }]), []);
+  const deletePurchaseOrder = useCallback(poId => setPOs(p    => p.filter(po => po.id !== poId)), []);
   const addBill             = useCallback(bill => setBills(p  => [...p, { ...bill, id: nid('bill') }]), []);
   const addWorkOrder        = useCallback(wo => setWorkOrders(p => [...p, { ...wo, id: nid('wo') }]), []);
   const updateWorkOrder     = useCallback((woId, updates) => setWorkOrders(p => p.map(w => w.id === woId ? { ...w, ...updates } : w)), []);
@@ -215,21 +216,8 @@ function DataProvider({ children }) {
     setPOs(prev => {
       const po = prev.find(p => p.id === poId);
       if (!po) return prev;
-      // Auto-post journal entry if payment status changed
-      if (updates.paymentStatus && updates.paymentStatus !== po.paymentStatus) {
-        postPOPaymentEntry(po, updates.paymentStatus, po.paymentStatus, updates.depositAmount || po.depositAmount || 0);
-      }
-      // Auto-post if shipping changed to delivered and payment was already tracked via AP
-      if (updates.shippingStatus === 'delivered' && po.shippingStatus !== 'delivered' && po.paymentStatus === 'deposit-paid') {
-        postPOReceivedEntry({ ...po, ...updates });
-      }
-      // Log status changes
       if (updates.orderStatus && updates.orderStatus !== po.orderStatus)
         logEvent({ type:'po', entity: po.poNumber, field:'Order Status', from: po.orderStatus, to: updates.orderStatus });
-      if (updates.paymentStatus && updates.paymentStatus !== po.paymentStatus)
-        logEvent({ type:'po', entity: po.poNumber, field:'Payment Status', from: po.paymentStatus, to: updates.paymentStatus });
-      if (updates.shippingStatus && updates.shippingStatus !== po.shippingStatus)
-        logEvent({ type:'po', entity: po.poNumber, field:'Shipping Status', from: po.shippingStatus, to: updates.shippingStatus });
       return prev.map(p => p.id === poId ? { ...p, ...updates } : p);
     });
   }, [postPOPaymentEntry, postPOReceivedEntry, logEvent]);
@@ -296,7 +284,7 @@ function DataProvider({ children }) {
   return (
     <DataContext.Provider value={{
       suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders,
-      addSupplier, addPart, addFinishedGood, addPurchaseOrder, updatePurchaseOrder,
+      addSupplier, addPart, addFinishedGood, addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
       bills, addBill, updateBill, deleteBill,
       workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder,
       postWOReleasedEntry, postWOAssemblyInvoice, postWOCompletedEntry,
@@ -753,16 +741,9 @@ function CreatePODialog() {
   const [open, setOpen] = useState(false);
   const [supplierId, setSupplierId] = useState('');
   const [orderStatus, setOrderStatus]   = useState('draft');
-  const [paymentStatus, setPaymentStatus] = useState('unpaid');
-  const [shippingStatus, setShippingStatus] = useState('unshipped');
   // Each item: { type:'part'|'fg', partId, fgId, fgSku, qty, unitCost }
   const [items, setItems] = useState([{ type:'part', partId:'', fgId:'', fgSku:'', qty:0, unitCost:0 }]);
   const [notes, setNotes] = useState('');
-  const [carrier, setCarrier] = useState('');
-  const [tracking, setTracking] = useState('');
-  const [shipDate, setShipDate] = useState('');
-  const [eta, setEta] = useState('');
-  const [deposit, setDeposit] = useState('');
 
   const supplierParts = supplierId ? parts.filter(p => p.supplierId === supplierId) : parts;
   const totalCost = items.reduce((s, i) => s + (i.qty||0) * (i.unitCost||0), 0);
@@ -784,9 +765,9 @@ function CreatePODialog() {
   };
 
   const reset = () => {
-    setSupplierId(''); setOrderStatus('draft'); setPaymentStatus('unpaid'); setShippingStatus('unshipped');
+    setSupplierId(''); setOrderStatus('draft');
     setItems([{ type:'part', partId:'', fgId:'', fgSku:'', qty:0, unitCost:0 }]);
-    setNotes(''); setCarrier(''); setTracking(''); setShipDate(''); setEta(''); setDeposit('');
+    setNotes('');
   };
 
   const submit = e => {
@@ -799,15 +780,12 @@ function CreatePODialog() {
     );
     addPurchaseOrder({
       poNumber:nextNum, supplierId, items: cleanItems,
-      orderStatus, paymentStatus, shippingStatus, dateOrdered:today(), totalCost,
-      notes:notes||undefined, carrier:carrier||undefined, trackingNumber:tracking||undefined,
-      shipDate:shipDate||undefined, eta:eta||undefined, depositAmount:deposit?parseFloat(deposit):undefined,
+      orderStatus, dateOrdered:today(), totalCost,
+      notes:notes||undefined,
     });
     toast.success(`${nextNum} created`);
     reset(); setOpen(false);
   };
-
-  const showShipping = shippingStatus==='shipped'||shippingStatus==='delivered';
 
   return (
     <>
@@ -819,41 +797,20 @@ function CreatePODialog() {
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           </Field>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
-            <Field label="Order Status">
-              <Select value={orderStatus} onChange={setOrderStatus}>
-                <option value="draft">Draft</option>
-                <option value="pending-approval">Pending Approval</option>
-                <option value="approved">Approved</option>
-                <option value="submitted">Submitted to Supplier</option>
-              </Select>
-            </Field>
-            <Field label="Payment Status">
-              <Select value={paymentStatus} onChange={setPaymentStatus}>
-                <option value="unpaid">Unpaid</option>
-                <option value="deposit-paid">Deposit Paid</option>
-                <option value="paid">Paid</option>
-              </Select>
-            </Field>
-            <Field label="Shipping">
-              <Select value={shippingStatus} onChange={setShippingStatus}>
-                <option value="unshipped">Unshipped</option>
-                <option value="shipped">Shipped</option>
-                <option value="delivered">Delivered</option>
-              </Select>
-            </Field>
-          </div>
-
-          {paymentStatus==='deposit-paid' && (
-            <Field label="Deposit Amount ($)"><Input type="number" step="0.01" min="0" value={deposit} onChange={e=>setDeposit(e.target.value)} placeholder="0.00" /></Field>
-          )}
+          <Field label="Order Status">
+            <Select value={orderStatus} onChange={setOrderStatus}>
+              <option value="draft">Draft</option>
+              <option value="pending-approval">Pending Approval</option>
+              <option value="approved">Approved</option>
+              <option value="submitted">Submitted to Supplier</option>
+            </Select>
+          </Field>
 
           <div>
             <Label>Line Items</Label>
             <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:4 }}>
               {items.map((item, idx) => (
                 <div key={idx} style={{ display:'flex', flexDirection:'column', gap:4, background:'hsl(220,15%,97%)', borderRadius:6, padding:8 }}>
-                  {/* Type toggle */}
                   <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:2 }}>
                     <div style={{ display:'flex', background:'hsl(220,15%,90%)', borderRadius:5, padding:2, gap:1 }}>
                       {['part','fg'].map(t => (
@@ -889,18 +846,6 @@ function CreatePODialog() {
             </div>
           </div>
 
-          {showShipping && (
-            <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:12 }}>
-              <div style={{ fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:10 }}>Shipping Info</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                <Field label="Carrier"><Input value={carrier} onChange={e=>setCarrier(e.target.value)} placeholder="e.g. DHL" /></Field>
-                <Field label="Tracking #"><Input value={tracking} onChange={e=>setTracking(e.target.value)} placeholder="e.g. DHL123456" /></Field>
-                <Field label="Ship Date"><Input type="date" value={shipDate} onChange={e=>setShipDate(e.target.value)} /></Field>
-                <Field label="ETA"><Input type="date" value={eta} onChange={e=>setEta(e.target.value)} /></Field>
-              </div>
-            </div>
-          )}
-
           <Field label="Notes (optional)">
             <Input type="textarea" value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Any notes for this PO..." rows={2} />
           </Field>
@@ -918,8 +863,9 @@ function CreatePODialog() {
 // ── PO Detail Modal ────────────────────────────────────────────────────────────
 // onBack: optional callback — when set, shows a back arrow instead of just closing
 function PODetail({ po, open, onClose, onBack }) {
-  const { getSupplierById, getPartById, finishedGoods, addBill, bills, updateBill } = useData();
-  const [viewingBill, setViewingBill] = useState(false); // true = show bill detail view
+  const { getSupplierById, getPartById, finishedGoods, addBill, bills, updateBill, updatePurchaseOrder, deletePurchaseOrder } = useData();
+  const [viewingBill, setViewingBill] = useState(false);
+  const [editingPO, setEditingPO] = useState(false);
   const [billF, setBillF] = useState({});
 
   if (!po) return null;
@@ -957,12 +903,21 @@ function PODetail({ po, open, onClose, onBack }) {
     closeBillView();
   };
 
+  const handleReturnToDraft = () => {
+    updatePurchaseOrder(po.id, { orderStatus: 'draft' });
+    toast.success(`${po.poNumber} returned to Draft`);
+    onClose();
+  };
+
+  const handleDeletePO = () => {
+    if (!confirm(`Delete ${po.poNumber}? This cannot be undone.`)) return;
+    deletePurchaseOrder(po.id);
+    toast.success(`${po.poNumber} deleted`);
+    onClose();
+  };
+
   const handleCreateBill = () => {
-    const amountDue = po.paymentStatus === 'deposit-paid'
-      ? po.totalCost - (po.depositAmount || 0)
-      : po.paymentStatus === 'paid' ? 0 : po.totalCost;
-    if (amountDue <= 0) { toast.error('PO is already fully paid — no bill needed'); return; }
-    if (existingBill)   { toast.error('A bill already exists for this PO'); return; }
+    if (existingBill) { toast.error('A bill already exists for this PO'); return; }
     // Auto-populate bill line items from PO line items
     const lineItems = po.items.map(i => {
       if (i.partId) {
@@ -975,12 +930,12 @@ function PODetail({ po, open, onClose, onBack }) {
     });
     addBill({
       poId: po.id, poNumber: po.poNumber, supplierId: po.supplierId,
-      amount: amountDue, amountPaid: 0,
+      amount: po.totalCost, amountPaid: 0,
       status: 'open', dueDate: '', dateCreated: today(),
       memo: `Bill from ${po.poNumber}`,
       lineItems,
     });
-    toast.success(`Bill created for ${po.poNumber} — ${fmt(amountDue)}`);
+    toast.success(`Bill created for ${po.poNumber} — ${fmt(po.totalCost)}`);
   };
 
   // Clickable info tile
@@ -1174,16 +1129,10 @@ function PODetail({ po, open, onClose, onBack }) {
         )}
 
         {/* Payment info */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:po.depositAmount?12:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
           <InfoTile label="Payment Method" value={supplier?.preferredPaymentMethod} />
           <InfoTile label="Payment Terms"  value={supplier?.paymentTerms} />
         </div>
-
-        {po.depositAmount>0 && (
-          <div style={{ background:'hsl(38,92%,96%)', border:'1px solid hsl(38,80%,80%)', borderRadius:8, padding:12, fontSize:13, marginBottom:16 }}>
-            Deposit paid: <strong className="mono">{fmt(po.depositAmount)}</strong> of {fmt(po.totalCost)} total
-          </div>
-        )}
 
         <Separator />
 
@@ -1233,7 +1182,7 @@ function PODetail({ po, open, onClose, onBack }) {
         </div>
 
         {/* Shipping */}
-        {(po.shippingStatus==='shipped'||po.shippingStatus==='delivered')&&(po.carrier||po.trackingNumber)&&(
+        {(po.carrier||po.trackingNumber)&&(
           <>
             <Separator />
             <div style={{ marginBottom:16 }}>
@@ -1289,9 +1238,146 @@ function PODetail({ po, open, onClose, onBack }) {
             <Btn variant="outline" size="sm" onClick={handleCreateBill}>Create Vendor Bill</Btn>
           )}
         </div>
+
+        <Separator />
+        {/* PO actions */}
+        <div style={{ display:'flex', gap:8, justifyContent:'space-between', alignItems:'center' }}>
+          <button onClick={handleDeletePO} style={{
+            fontSize:12, fontWeight:600, color:'hsl(0,60%,50%)', background:'none',
+            border:'1px solid hsl(0,60%,80%)', borderRadius:6, padding:'5px 12px', cursor:'pointer', fontFamily:'inherit',
+          }}
+          onMouseEnter={e=>{e.currentTarget.style.background='hsl(0,90%,97%)';}}
+          onMouseLeave={e=>{e.currentTarget.style.background='none';}}>
+            Delete PO
+          </button>
+          <div style={{ display:'flex', gap:8 }}>
+            {po.orderStatus === 'submitted' && (
+              <Btn variant="outline" size="sm" onClick={handleReturnToDraft}>↩ Return to Draft</Btn>
+            )}
+            {po.orderStatus === 'draft' && (
+              <Btn size="sm" onClick={() => setEditingPO(true)}>Edit PO</Btn>
+            )}
+          </div>
+        </div>
         </React.Fragment>
         )}
       </div>
+      {editingPO && <EditPODialog po={po} open={editingPO} onClose={() => setEditingPO(false)} onSaved={() => { setEditingPO(false); onClose(); }} />}
+    </Modal>
+  );
+}
+
+// ── Edit PO Dialog ─────────────────────────────────────────────────────────────
+function EditPODialog({ po, open, onClose, onSaved }) {
+  const { suppliers, parts, finishedGoods, updatePurchaseOrder } = useData();
+  const [supplierId, setSupplierId] = useState(po.supplierId);
+  const [orderStatus, setOrderStatus] = useState(po.orderStatus);
+  const [notes, setNotes] = useState(po.notes || '');
+
+  // Normalise existing items to include type field
+  const normaliseItem = i => i.partId
+    ? { type:'part', partId:i.partId, fgId:'', fgSku:'', qty:i.qty, unitCost:i.unitCost }
+    : { type:'fg', partId:'', fgId:i.fgId, fgSku:i.fgSku||'', qty:i.qty, unitCost:i.unitCost };
+  const [items, setItems] = useState(po.items.map(normaliseItem));
+
+  const supplierParts = supplierId ? parts.filter(p => p.supplierId === supplierId) : parts;
+  const totalCost = items.reduce((s, i) => s + (i.qty||0) * (i.unitCost||0), 0);
+
+  const addItem = () => setItems(p => [...p, { type:'part', partId:'', fgId:'', fgSku:'', qty:0, unitCost:0 }]);
+  const removeItem = idx => setItems(p => p.filter((_,i) => i!==idx));
+  const updateItem = (idx, updates) => setItems(p => p.map((item,i) => i===idx ? {...item,...updates} : item));
+  const handlePartSelect = (idx, partId) => {
+    const part = parts.find(p => p.id === partId);
+    updateItem(idx, { partId, fgId:'', fgSku:'', unitCost: part?.unitCost || 0 });
+  };
+  const handleFGSelect = (idx, fgId) => {
+    const fg = finishedGoods.find(f => f.id === fgId);
+    updateItem(idx, { fgId, fgSku: fg?.sku || '', partId:'', unitCost: 0 });
+  };
+  const toggleItemType = (idx, type) => updateItem(idx, { type, partId:'', fgId:'', fgSku:'', unitCost:0 });
+
+  const submit = e => {
+    e.preventDefault();
+    const validItems = items.filter(i => (i.type==='part' ? i.partId : i.fgId) && i.qty > 0);
+    if (!supplierId || validItems.length === 0) { toast.error('Please fill in supplier and at least one valid line item'); return; }
+    const cleanItems = validItems.map(i => i.type === 'part'
+      ? { partId: i.partId, qty: i.qty, unitCost: i.unitCost }
+      : { fgId: i.fgId, fgSku: i.fgSku, qty: i.qty, unitCost: i.unitCost }
+    );
+    updatePurchaseOrder(po.id, {
+      supplierId, items: cleanItems, orderStatus,
+      totalCost, notes: notes || undefined,
+    });
+    toast.success(`${po.poNumber} updated`);
+    onSaved();
+  };
+
+  return (
+    <Modal title={`Edit ${po.poNumber}`} open={open} onClose={onClose} wide>
+      <form onSubmit={submit} style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        <Field label="Supplier">
+          <Select value={supplierId} onChange={setSupplierId} placeholder="Select supplier">
+            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </Select>
+        </Field>
+        <Field label="Order Status">
+          <Select value={orderStatus} onChange={setOrderStatus}>
+            <option value="draft">Draft</option>
+            <option value="pending-approval">Pending Approval</option>
+            <option value="approved">Approved</option>
+            <option value="submitted">Submitted to Supplier</option>
+          </Select>
+        </Field>
+
+        <div>
+          <Label>Line Items</Label>
+          <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:4 }}>
+            {items.map((item, idx) => (
+              <div key={idx} style={{ display:'flex', flexDirection:'column', gap:4, background:'hsl(220,15%,97%)', borderRadius:6, padding:8 }}>
+                <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:2 }}>
+                  <div style={{ display:'flex', background:'hsl(220,15%,90%)', borderRadius:5, padding:2, gap:1 }}>
+                    {['part','fg'].map(t => (
+                      <button key={t} type="button" onClick={() => toggleItemType(idx, t)} style={{
+                        padding:'3px 10px', fontSize:11, fontWeight:600, border:'none', borderRadius:4, cursor:'pointer',
+                        background: item.type===t ? 'white' : 'transparent',
+                        color: item.type===t ? 'hsl(220,25%,10%)' : 'hsl(220,10%,56%)',
+                        boxShadow: item.type===t ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                      }}>{t === 'part' ? 'Component / Part' : 'Finished Good'}</button>
+                    ))}
+                  </div>
+                  {items.length > 1 && <button type="button" onClick={() => removeItem(idx)} style={{ marginLeft:'auto', background:'none', border:'none', color:'hsl(0,60%,60%)', cursor:'pointer', fontSize:12 }}>✕ Remove</button>}
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 80px 100px', gap:6 }}>
+                  {item.type === 'part' ? (
+                    <Select value={item.partId} onChange={v => handlePartSelect(idx, v)} placeholder="Select part">
+                      {supplierParts.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
+                    </Select>
+                  ) : (
+                    <Select value={item.fgId} onChange={v => handleFGSelect(idx, v)} placeholder="Select finished good">
+                      {finishedGoods.map(fg => <option key={fg.id} value={fg.id}>{fg.name} — {fg.sku}</option>)}
+                    </Select>
+                  )}
+                  <Input type="number" min="0" placeholder="Qty" value={item.qty||''} onChange={e => updateItem(idx, { qty: parseInt(e.target.value)||0 })} />
+                  <Input type="number" step="0.01" min="0" placeholder="Unit $" value={item.unitCost||''} onChange={e => updateItem(idx, { unitCost: parseFloat(e.target.value)||0 })} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:8 }}>
+            <Btn variant="outline" size="sm" onClick={addItem}><Icons.Plus /> Add Line</Btn>
+            {totalCost>0 && <span className="mono" style={{ fontSize:13, fontWeight:600 }}>Total: {fmt(totalCost)}</span>}
+          </div>
+        </div>
+
+        <Field label="Notes (optional)">
+          <Input type="textarea" value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Any notes..." rows={2} />
+        </Field>
+
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+          <Btn type="submit">Save Changes</Btn>
+        </div>
+      </form>
     </Modal>
   );
 }
@@ -1380,12 +1466,14 @@ function Dashboard({ setPage }) {
     return sum + r.qty * part.unitCost;
   }, 0);
 
-  // FG stats derived from POs with fgId line items
-  const fgPOItems = purchaseOrders.flatMap(po =>
-    po.items.filter(i => i.fgId).map(i => ({ ...i, shippingStatus: po.shippingStatus }))
-  );
-  const totalFGOnOrder  = fgPOItems.filter(i => i.shippingStatus !== 'delivered').reduce((s,i) => s+i.qty, 0);
-  const totalFGReceived = fgPOItems.filter(i => i.shippingStatus === 'delivered').reduce((s,i) => s+i.qty, 0);
+  // FG stats derived from POs with fgId line items — shipment status from linked bill
+  const fgPOItems = purchaseOrders.flatMap(po => {
+    const bill = bills.find(b => b.poId === po.id);
+    const shipStatus = bill?.shipmentStatus || 'open';
+    return po.items.filter(i => i.fgId).map(i => ({ ...i, shipStatus, poId: po.id }));
+  });
+  const totalFGOnOrder  = fgPOItems.filter(i => i.shipStatus !== 'received').reduce((s,i) => s+i.qty, 0);
+  const totalFGReceived = fgPOItems.filter(i => i.shipStatus === 'received').reduce((s,i) => s+i.qty, 0);
 
   const fg = finishedGoods[0];
   const totalUnitCost = fg ? fg.bom.reduce((s,l) => { const p=getPartById(l.partId); return s+(p?p.unitCost*l.qty:0); }, 0) + fg.assemblyCost : 0;
@@ -1480,6 +1568,10 @@ function Dashboard({ setPage }) {
             {purchaseOrders.filter(po => po.items.some(i => i.fgId)).slice().reverse().map(po => {
               const fgItem = po.items.find(i => i.fgId);
               const fg = finishedGoods.find(f => f.id === fgItem?.fgId);
+              const bill = bills.find(b => b.poId === po.id);
+              const shipStatus = bill?.shipmentStatus || 'open';
+              const shipLabel = { open:'Awaiting Bill', 'in-transit':'In Transit', received:'Received' }[shipStatus];
+              const shipCls   = { open:'badge-muted', 'in-transit':'badge-yellow', received:'badge-green' }[shipStatus];
               return (
                 <div key={po.id} onClick={() => setSelectedPO(po)}
                   style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 16px', borderBottom:'1px solid hsl(220,15%,92%)', cursor:'pointer' }}
@@ -1489,7 +1581,7 @@ function Dashboard({ setPage }) {
                     <div style={{ fontSize:12, color:'hsl(220,10%,56%)', marginTop:2 }}>{fgItem?.qty} units · {fg?.name || fgItem?.fgSku}</div>
                   </div>
                   <div style={{ textAlign:'right', display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
-                    <Badge cls={shippingCls[po.shippingStatus]}>{{ unshipped:'Unshipped', shipped:'Shipped', delivered:'Delivered' }[po.shippingStatus]}</Badge>
+                    <Badge cls={shipCls}>{shipLabel}</Badge>
                     <div className="mono" style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>{fmt(po.totalCost)}</div>
                   </div>
                 </div>
@@ -1775,7 +1867,7 @@ function AddInventoryDialog() {
 }
 
 function InventoryPage() {
-  const { parts, finishedGoods, inventoryRecords, purchaseOrders, suppliers, getSupplierById, deleteInventoryRecord, updateInventoryRecord } = useData();
+  const { parts, finishedGoods, inventoryRecords, purchaseOrders, suppliers, getSupplierById, deleteInventoryRecord, updateInventoryRecord, bills } = useData();
   const [view, setView] = useState('part');   // 'part' | 'fg'
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -1808,16 +1900,18 @@ function InventoryPage() {
       };
     });
 
-  // FG rows — derived from POs with fgId line items
-  const fgRows = purchaseOrders.flatMap(po =>
-    po.items.filter(i => i.fgId).map(i => {
+  // FG rows — derived from POs with fgId line items; shipment status from linked bill
+  const fgRows = purchaseOrders.flatMap(po => {
+    const bill = bills.find(b => b.poId === po.id);
+    const shipStatus = bill?.shipmentStatus || 'open';
+    return po.items.filter(i => i.fgId).map(i => {
       const fg = finishedGoods.find(f => f.id === i.fgId);
       const sup = suppliers.find(s => s.id === po.supplierId);
-      const location = po.shippingStatus === 'delivered' ? 'Warehouse'
-        : po.shippingStatus === 'shipped' ? 'In Transit'
+      const location = shipStatus === 'received' ? (bill?.receivedLocation || 'Warehouse')
+        : shipStatus === 'in-transit' ? 'In Transit'
         : 'Factory — On Order';
-      const status = po.shippingStatus === 'delivered' ? 'received'
-        : po.shippingStatus === 'shipped' ? 'shipped'
+      const status = shipStatus === 'received' ? 'received'
+        : shipStatus === 'in-transit' ? 'shipped'
         : 'on-order';
       return {
         id: `${po.id}-${i.fgId}`,
@@ -1835,8 +1929,8 @@ function InventoryPage() {
         fgSkus: [i.fgSku],
         orderNumber: po.poNumber,
       };
-    })
-  );
+    });
+  });
 
   // Also include any manually added FG inventory records
   const fgManualRows = inventoryRecords
@@ -2068,7 +2162,7 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
   const [selectedPO, setSelectedPO] = useState(null);
   const displayedPOs = supplierFilter ? purchaseOrders.filter(po => po.supplierId === supplierFilter.id) : purchaseOrders;
   const totalSpend = displayedPOs.reduce((s,po) => s+po.totalCost, 0);
-  const openPOs = displayedPOs.filter(po => po.orderStatus==='submitted' && po.shippingStatus!=='delivered');
+  const openPOs = displayedPOs.filter(po => po.orderStatus==='submitted');
 
   const update = (poId, field, value) => {
     updatePurchaseOrder(poId, { [field]: value });
@@ -2099,7 +2193,7 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
 
       <div style={{ fontSize:12, color:'hsl(220,10%,56%)', display:'flex', alignItems:'center', gap:6 }}>
         <span style={{ background:'hsl(220,15%,92%)', borderRadius:4, padding:'2px 7px', fontSize:11 }}>Tip</span>
-        Click any status badge to update it inline · Click a row to view full PO detail
+        Click a row to view full PO detail · Draft POs can be edited; Submitted POs can be returned to Draft
       </div>
 
       <Card>
@@ -2275,18 +2369,10 @@ function SupplierDirectory({ navigate }) {
       fg.bom.some(line => suppliedPartIds.includes(line.partId))
     );
 
-    // On Order value: POs that have NOT been delivered yet (paid or partially paid, but parts not shipped)
+    // On Order value: submitted POs (not yet received via bill)
     const onOrderValue = purchaseOrders
-      .filter(po => po.supplierId === s.id && po.shippingStatus !== 'delivered')
+      .filter(po => po.supplierId === s.id && po.orderStatus === 'submitted')
       .reduce((sum, po) => sum + po.totalCost, 0);
-
-    // Balance Owed: what we still owe them (unpaid + deposit balance)
-    const balanceOwed = purchaseOrders
-      .filter(po => po.supplierId === s.id && po.paymentStatus !== 'paid')
-      .reduce((sum, po) => {
-        const paid = po.paymentStatus === 'deposit-paid' ? (po.depositAmount || 0) : 0;
-        return sum + (po.totalCost - paid);
-      }, 0);
 
     const corpus = [
       s.name, s.shortName, s.city, s.country, s.email, s.phone,
@@ -2295,7 +2381,7 @@ function SupplierDirectory({ navigate }) {
       ...suppliedFGs.map(fg => `${fg.name} ${fg.sku}`),
     ].join(' ').toLowerCase();
 
-    return { s, suppliedParts, suppliedFGs, onOrderValue, balanceOwed, corpus };
+    return { s, suppliedParts, suppliedFGs, onOrderValue, corpus };
   });
 
   const q = query.toLowerCase().trim();
@@ -2314,7 +2400,7 @@ function SupplierDirectory({ navigate }) {
     }, [data?.s?.id]);
 
     if (!data) return null;
-    const { s, suppliedParts, suppliedFGs, onOrderValue, balanceOwed } = data;
+    const { s, suppliedParts, suppliedFGs, onOrderValue } = data;
     const supPOs = purchaseOrders.filter(po => po.supplierId === s.id);
 
     const save = () => {
@@ -2366,14 +2452,6 @@ function SupplierDirectory({ navigate }) {
                 <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,70%,40%)', marginBottom:3 }}>On Order ↗</div>
                 <div className="mono" style={{ fontSize:17, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(onOrderValue)}</div>
                 <div style={{ fontSize:10, color:'hsl(220,70%,55%)', marginTop:2 }}>click to view POs</div>
-              </div>
-              <div style={{
-                background: balanceOwed > 0 ? 'hsl(38,92%,96%)' : 'hsl(160,50%,95%)',
-                border: `1px solid ${balanceOwed > 0 ? 'hsl(38,80%,80%)' : 'hsl(160,50%,80%)'}`,
-                borderRadius:8, padding:'10px 16px', textAlign:'right'
-              }}>
-                <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:3 }}>Balance Owed</div>
-                <div className="mono" style={{ fontSize:17, fontWeight:700, color: balanceOwed > 0 ? 'hsl(38,80%,35%)' : 'hsl(160,60%,30%)' }}>{fmt(balanceOwed)}</div>
               </div>
             </div>
           </div>
@@ -2490,7 +2568,7 @@ function SupplierDirectory({ navigate }) {
               <table>
                 <thead>
                   <tr style={{ background:'hsl(220,15%,96%)' }}>
-                    <TH>PO #</TH><TH right>Total</TH><TH>Payment</TH><TH>Shipping</TH><TH>Date</TH>
+                    <TH>PO #</TH><TH right>Total</TH><TH>Status</TH><TH>Date</TH>
                   </tr>
                 </thead>
                 <tbody>
@@ -2501,8 +2579,7 @@ function SupplierDirectory({ navigate }) {
                       onClick={() => setPreviewPO(po)}>
                       <TD><span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:600 }}>{po.poNumber}</span></TD>
                       <TD right mono bold>{fmt(po.totalCost)}</TD>
-                      <TD><Badge cls={paymentCls[po.paymentStatus]}>{po.paymentStatus}</Badge></TD>
-                      <TD><Badge cls={shippingCls[po.shippingStatus]}>{po.shippingStatus}</Badge></TD>
+                      <TD><Badge cls={orderStatusCls[po.orderStatus]}>{{ draft:'Draft', 'pending-approval':'Pending Approval', approved:'Approved', submitted:'Submitted' }[po.orderStatus] || po.orderStatus}</Badge></TD>
                       <TD muted>{po.dateOrdered}</TD>
                       <TD muted><span style={{ fontSize:11, color:'hsl(220,70%,55%)' }}>view ↗</span></TD>
                     </tr>
@@ -2563,15 +2640,14 @@ function SupplierDirectory({ navigate }) {
                 <TH>Company Name</TH>
                 <TH>Contact</TH>
                 <TH right>On Order</TH>
-                <TH right>Balance Owed</TH>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={4} style={{ padding:'40px 14px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:13 }}>No suppliers match your search.</td></tr>
+                <tr><td colSpan={3} style={{ padding:'40px 14px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:13 }}>No suppliers match your search.</td></tr>
               )}
               {filtered.map(row => {
-                const { s, onOrderValue, balanceOwed } = row;
+                const { s, onOrderValue } = row;
                 return (
                   <tr key={s.id} style={{ cursor:'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background='hsl(220,15%,97%)'}
@@ -2596,11 +2672,6 @@ function SupplierDirectory({ navigate }) {
                         {fmt(onOrderValue)}
                       </span>
                     </TD>
-                    <TD right>
-                      <span className="mono" style={{ fontWeight:600, color: balanceOwed > 0 ? 'hsl(38,80%,35%)' : 'hsl(160,60%,30%)' }}>
-                        {fmt(balanceOwed)}
-                      </span>
-                    </TD>
                   </tr>
                 );
               })}
@@ -2611,9 +2682,6 @@ function SupplierDirectory({ navigate }) {
                   <td colSpan={2} style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
                   <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(220,70%,45%)' }}>
                     {fmt(filtered.reduce((s,r) => s + r.onOrderValue, 0))}
-                  </td>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(38,80%,35%)' }}>
-                    {fmt(filtered.reduce((s,r) => s + r.balanceOwed, 0))}
                   </td>
                 </tr>
               </tfoot>
@@ -4306,10 +4374,10 @@ function GlobalSearch({ setPage, onResult }) {
 
 const navItems = [
   { id:'dashboard',   label:'Dashboard',       Icon: Icons.Dashboard },
-  { id:'inventory',   label:'Inventory',       Icon: Icons.Package   },
   { id:'pos',         label:'Purchase Orders', Icon: Icons.Clipboard },
-  { id:'workorders',  label:'Work Orders',     Icon: Icons.Layers    },
   { id:'bills',       label:'Vendor Bills',    Icon: Icons.Dollar    },
+  { id:'workorders',  label:'Work Orders',     Icon: Icons.Layers    },
+  { id:'inventory',   label:'Inventory',       Icon: Icons.Package   },
   { id:'bom',         label:'BOM & COGS',      Icon: Icons.Layers    },
   { id:'suppliers',   label:'Suppliers',       Icon: Icons.Users     },
   { id:'ledger',      label:'General Ledger',  Icon: Icons.File      },

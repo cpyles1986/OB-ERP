@@ -201,7 +201,7 @@ function DataProvider({ children }) {
   }, [suppliers, postEntry]);
 
   const addSupplier         = useCallback(s  => setSuppliers(p => [...p, { ...s,  id: nid('sup')  }]), []);
-  const addPart             = useCallback(pt => setParts(p     => [...p, { ...pt, id: nid('part') }]), []);
+  const addPart             = useCallback(pt => setParts(p     => [...p, { id: nid('part'), ...pt  }]), []);
   const addFinishedGood     = useCallback(fg => setFGs(p       => [...p, { ...fg, id: nid('fg')   }]), []);
   const addPurchaseOrder    = useCallback(po => setPOs(p       => [...p, { ...po, id: nid('po')   }]), []);
   const deletePurchaseOrder = useCallback(poId => setPOs(p    => p.filter(po => po.id !== poId)), []);
@@ -232,6 +232,22 @@ function DataProvider({ children }) {
   const addInventoryRecord    = useCallback(r  => setInventory(p => [...p, { ...r, id: nid('inv') }]), []);
   const updateInventoryRecord = useCallback((id, updates) => setInventory(p => p.map(r => r.id === id ? { ...r, ...updates } : r)), []);
   const deleteInventoryRecord = useCallback(id => setInventory(p => p.filter(r => r.id !== id)), []);
+  const transferInventory = useCallback((sourceRecordId, toLocation, qty) => {
+    setInventory(prev => {
+      const source = prev.find(r => r.id === sourceRecordId);
+      if (!source || qty <= 0) return prev;
+      const transferQty = Math.min(qty, source.qty);
+      let next = prev.map(r => r.id === sourceRecordId ? { ...r, qty: r.qty - transferQty } : r)
+                     .filter(r => r.qty > 0);
+      const dest = next.find(r => r.partId === source.partId && r.fgId === source.fgId && r.location === toLocation);
+      if (dest) {
+        next = next.map(r => r.id === dest.id ? { ...r, qty: r.qty + transferQty } : r);
+      } else {
+        next = [...next, { ...source, id: nid('inv'), location: toLocation, qty: transferQty, dateReceived: today() }];
+      }
+      return next;
+    });
+  }, []);
   const getPartById      = useCallback(id => parts.find(p => p.id === id), [parts]);
   const getSupplierById  = useCallback(id => suppliers.find(s => s.id === id), [suppliers]);
 
@@ -289,7 +305,7 @@ function DataProvider({ children }) {
       workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder,
       postWOReleasedEntry, postWOAssemblyInvoice, postWOCompletedEntry,
       updateBOM, updatePart, deletePart, updateSupplier, deleteSupplier, updateFinishedGood, deleteFinishedGood, getPartById, getSupplierById,
-      addInventoryRecord, updateInventoryRecord, deleteInventoryRecord,
+      addInventoryRecord, updateInventoryRecord, deleteInventoryRecord, transferInventory,
       accounts, journal, addAccount, postEntry, reverseEntry, postSalesSummary,
       activityLog, logEvent,
     }}>
@@ -534,19 +550,39 @@ function AddSupplierDialog() {
 
 // ── Add Part Dialog ────────────────────────────────────────────────────────────
 function AddPartDialog() {
-  const { addPart, suppliers } = useData();
+  const { addPart, suppliers, finishedGoods, updateBOM } = useData();
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({ type:'component' });
+  const [usedIn, setUsedIn] = useState({}); // { fgId: qty }
   const fld = k => ({ value: f[k]||'', onChange: e => setF(p=>({...p,[k]:e.target.value})) });
-  const reset = () => setF({ type:'component' });
+  const reset = () => { setF({ type:'component' }); setUsedIn({}); };
   const valid = f.name?.trim() && f.sku?.trim() && f.unitCost && f.supplierId;
+
+  const toggleFG = (fgId) => {
+    setUsedIn(prev => {
+      if (prev[fgId] !== undefined) {
+        const next = { ...prev }; delete next[fgId]; return next;
+      }
+      return { ...prev, [fgId]: 1 };
+    });
+  };
+
   const submit = e => {
     e.preventDefault();
     if (!valid) return;
-    addPart({ name:f.name.trim(), sku:f.sku.trim(), unitCost:parseFloat(f.unitCost), freightCost:parseFloat(f.freightCost)||0, supplierId:f.supplierId, type:f.type||'component', notes:f.notes||undefined });
-    toast.success(`Part "${f.name.trim()}" added`);
+    const newId = `part-${_id + 1}`; // predict next nid('part') result
+    addPart({ id: newId, name:f.name.trim(), sku:f.sku.trim(), unitCost:parseFloat(f.unitCost), freightCost:parseFloat(f.freightCost)||0, supplierId:f.supplierId, type:f.type||'component', notes:f.notes||undefined });
+    // Update BOMs for selected FGs
+    Object.entries(usedIn).forEach(([fgId, qty]) => {
+      const fg = finishedGoods.find(g => g.id === fgId);
+      if (!fg) return;
+      updateBOM(fgId, [...fg.bom, { partId: newId, qty: parseInt(qty) || 1 }]);
+    });
+    const fgCount = Object.keys(usedIn).length;
+    toast.success(`Part "${f.name.trim()}" added${fgCount ? ` · added to ${fgCount} FG BOM${fgCount > 1 ? 's' : ''}` : ''}`);
     reset(); setOpen(false);
   };
+
   return (
     <>
       <Btn variant="outline" size="sm" onClick={() => setOpen(true)}><Icons.Plus /> Part</Btn>
@@ -560,7 +596,8 @@ function AddPartDialog() {
             <Field label="Unit Cost ($)"><Input type="number" step="0.01" min="0" {...fld('unitCost')} placeholder="0.00" className="mono" /></Field>
             <Field label="Freight ($)"><Input type="number" step="0.01" min="0" {...fld('freightCost')} placeholder="0.00" className="mono" /></Field>
             <Field label="Supplier">
-              <Select value={f.supplierId||''} onChange={v => setF(p=>({...p,supplierId:v}))} placeholder="Select...">
+              <Select value={f.supplierId||''} onChange={v => setF(p=>({...p,supplierId:v}))}>
+                <option value="">Select…</option>
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.shortName}</option>)}
               </Select>
             </Field>
@@ -573,8 +610,42 @@ function AddPartDialog() {
             </Field>
           </div>
           <Field label="Notes (optional)"><Input {...fld('notes')} placeholder="Any additional notes..." /></Field>
+
+          {/* Used In FG SKUs */}
+          <div style={{ borderTop:'1px solid hsl(220,15%,90%)', paddingTop:12 }}>
+            <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,56%)', marginBottom:8 }}>
+              Used In Finished Goods (optional)
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {finishedGoods.map(fg => {
+                const checked = usedIn[fg.id] !== undefined;
+                return (
+                  <div key={fg.id} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <input type="checkbox" id={`fg-${fg.id}`} checked={checked} onChange={() => toggleFG(fg.id)}
+                      style={{ width:15, height:15, cursor:'pointer', accentColor:'hsl(220,70%,45%)' }} />
+                    <label htmlFor={`fg-${fg.id}`} style={{ flex:1, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontWeight:500 }}>{fg.name}</span>
+                      <span className="mono" style={{ fontSize:11, color:'hsl(220,70%,45%)' }}>{fg.sku}</span>
+                    </label>
+                    {checked && (
+                      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                        <span style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>Qty per unit:</span>
+                        <input type="number" min={1} value={usedIn[fg.id]||1}
+                          onChange={e => setUsedIn(prev => ({ ...prev, [fg.id]: parseInt(e.target.value)||1 }))}
+                          style={{ width:60, padding:'4px 6px', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:5, fontFamily:'JetBrains Mono,monospace', textAlign:'center' }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {finishedGoods.length === 0 && (
+                <div style={{ fontSize:12, color:'hsl(220,10%,65%)' }}>No finished goods defined yet.</div>
+              )}
+            </div>
+          </div>
+
           <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-            <Btn variant="ghost" onClick={() => setOpen(false)}>Cancel</Btn>
+            <Btn variant="ghost" type="button" onClick={() => { setOpen(false); reset(); }}>Cancel</Btn>
             <Btn type="submit" disabled={!valid}>Add Part</Btn>
           </div>
         </form>
@@ -961,7 +1032,7 @@ function PODetail({ po, open, onClose, onBack }) {
       doc.setDrawColor(200,200,200).setLineWidth(0.5).line(margin, y, W - margin, y);
       y += 20;
 
-      // Two-column: Vendor (left) | Bill To (right)
+      // Two-column: Supplier (left) | Bill To (right)
       const col2 = W / 2 + 10;
       doc.setFont('helvetica','bold').setFontSize(9).setTextColor(100,100,100);
       doc.text('SUPPLIER', margin, y);
@@ -972,13 +1043,13 @@ function PODetail({ po, open, onClose, onBack }) {
       doc.text('OneBlade, Inc.', col2, y);
       y += 14;
       doc.setFont('helvetica','normal').setFontSize(10);
-      const vendorLines = [
+      const supplierLines = [
         supplier?.address,
         [supplier?.city, supplier?.country].filter(Boolean).join(', '),
         supplier?.email,
         supplier?.phone,
       ].filter(Boolean);
-      vendorLines.forEach(line => { doc.text(line, margin, y); y += 13; });
+      supplierLines.forEach(line => { doc.text(line, margin, y); y += 13; });
 
       // Divider
       y += 10;
@@ -990,7 +1061,7 @@ function PODetail({ po, open, onClose, onBack }) {
       const C = { num: margin, desc: margin+22, sku: 272, qty: 388, unit: 476, total: W-margin };
       const tableW = W - margin*2;
 
-      doc.setFillColor(245,245,247).rect(margin, y-10, tableW, 22, 'F');
+      doc.setFillColor(245,245,247).setDrawColor(245,245,247).setLineWidth(0).rect(margin, y-10, tableW, 22, 'F');
       doc.setFont('helvetica','bold').setFontSize(9).setTextColor(60,60,60);
       doc.text('#',           C.num,   y+4);
       doc.text('Description', C.desc,  y+4);
@@ -2385,81 +2456,334 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
   );
 }
 
+// ── Transfer Inventory Dialog ───────────────────────────────────────────────────
+function TransferDialog({ records, partName, sku, open, onClose }) {
+  const { transferInventory, logEvent, suppliers, addSupplier } = useData();
+  const [fromId, setFromId] = useState('');
+  const [toLocation, setToLocation] = useState('');
+  const [qty, setQty] = useState('');
+  const [showNewLocation, setShowNewLocation] = useState(false);
+  const [newSupF, setNewSupF] = useState({});
+
+  useEffect(() => {
+    if (open && records?.length === 1) setFromId(records[0].id);
+    if (!open) { setFromId(''); setToLocation(''); setQty(''); setShowNewLocation(false); setNewSupF({}); }
+  }, [open]);
+
+  if (!records?.length) return null;
+  const source = records.find(r => r.id === fromId) || records[0];
+  const fld = k => ({ value: newSupF[k]||'', onChange: e => setNewSupF(p=>({...p,[k]:e.target.value})) });
+
+  const handleSelectChange = e => {
+    const val = e.target.value;
+    if (val === '__new__') { setShowNewLocation(true); setToLocation(''); }
+    else setToLocation(val);
+  };
+
+  const handleAddLocation = e => {
+    e.preventDefault();
+    if (!newSupF.name?.trim()) return;
+    const name = newSupF.name.trim();
+    addSupplier({ name, shortName: newSupF.shortName||name, address: newSupF.address, city: newSupF.city, state: newSupF.state, zip: newSupF.zip, country: newSupF.country, email: newSupF.email, phone: newSupF.phone });
+    toast.success(`"${name}" added as a supplier`);
+    setToLocation(name);
+    setShowNewLocation(false);
+    setNewSupF({});
+  };
+
+  const handleTransfer = () => {
+    const q = parseInt(qty);
+    if (!fromId) { toast.error('Select source location'); return; }
+    if (!toLocation.trim()) { toast.error('Select a destination location'); return; }
+    if (!q || q <= 0) { toast.error('Enter a valid quantity'); return; }
+    if (q > source.qty) { toast.error(`Only ${source.qty} available at ${source.location}`); return; }
+    if (toLocation.trim() === source.location) { toast.error('Source and destination are the same'); return; }
+    transferInventory(source.id, toLocation.trim(), q);
+    logEvent({ type:'inventory', entity: sku, field:'Transfer', from: source.location, to: toLocation.trim() });
+    toast.success(`Transferred ${q} × ${sku} → ${toLocation.trim()}`);
+    onClose();
+  };
+
+  return (
+    <>
+    <Modal title="Transfer Inventory" open={open} onClose={onClose}>
+      <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px' }}>
+          <div style={{ fontSize:13, fontWeight:600 }}>{partName}</div>
+          <div className="mono" style={{ fontSize:11, color:'hsl(220,70%,45%)', marginTop:2 }}>{sku}</div>
+        </div>
+        {records.length > 1 && (
+          <Field label="From Location">
+            <Select value={fromId} onChange={v => setFromId(v)}>
+              <option value="">Select location…</option>
+              {records.map(r => <option key={r.id} value={r.id}>{r.location} ({r.qty} units)</option>)}
+            </Select>
+          </Field>
+        )}
+        {records.length === 1 && (
+          <div style={{ fontSize:13, color:'hsl(220,10%,40%)' }}>
+            From: <strong>{source.location}</strong> · <span className="mono">{source.qty}</span> available
+          </div>
+        )}
+        <Field label="Quantity">
+          <Input type="number" min={1} max={source.qty} value={qty} onChange={e => setQty(e.target.value)} autoFocus placeholder={`1 – ${source.qty}`} />
+        </Field>
+        <Field label="Destination Location">
+          <select
+            value={toLocation || ''}
+            onChange={handleSelectChange}
+            style={{ width:'100%', padding:'8px 10px', fontSize:13, border:'1px solid hsl(220,15%,85%)', borderRadius:6, fontFamily:'inherit', outline:'none', background:'white', appearance:'auto' }}>
+            <option value="">Select destination…</option>
+            {suppliers.filter(s => s.name !== source.location && !s.archived).map(s => (
+              <option key={s.id} value={s.name}>{s.name}</option>
+            ))}
+            <option value="__new__">+ Create New Location</option>
+          </select>
+          {toLocation && toLocation !== '__new__' && (
+            <div style={{ fontSize:11, color:'hsl(220,10%,60%)', marginTop:4 }}>Selected: <strong>{toLocation}</strong></div>
+          )}
+        </Field>
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8, paddingTop:4 }}>
+          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+          <Btn onClick={handleTransfer}>Transfer</Btn>
+        </div>
+      </div>
+    </Modal>
+
+    {/* New Location = Add Supplier dialog */}
+    <Modal title="Create New Location" open={showNewLocation} onClose={() => { setShowNewLocation(false); setNewSupF({}); }}>
+      <form onSubmit={handleAddLocation} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginBottom:2 }}>
+          This will add a new entry to your Supplier Directory and set it as the transfer destination.
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          <Field label="Name *"><Input {...fld('name')} placeholder="e.g. US Warehouse" autoFocus /></Field>
+          <Field label="Short Name"><Input {...fld('shortName')} placeholder="e.g. Warehouse" /></Field>
+        </div>
+        <Field label="Address"><Input {...fld('address')} placeholder="Street address" /></Field>
+        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:8 }}>
+          <Field label="City"><Input {...fld('city')} /></Field>
+          <Field label="State"><Input {...fld('state')} /></Field>
+          <Field label="ZIP"><Input {...fld('zip')} /></Field>
+          <Field label="Country"><Input {...fld('country')} /></Field>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          <Field label="Email"><Input type="email" {...fld('email')} /></Field>
+          <Field label="Phone"><Input {...fld('phone')} /></Field>
+        </div>
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:4 }}>
+          <Btn variant="ghost" type="button" onClick={() => { setShowNewLocation(false); setNewSupF({}); }}>Cancel</Btn>
+          <Btn type="submit" disabled={!newSupF.name?.trim()}>Add Location</Btn>
+        </div>
+      </form>
+    </Modal>
+    </>
+  );
+}
+
 function BOMPage() {
-  const { finishedGoods, parts, getPartById, getSupplierById } = useData();
+  const { finishedGoods, parts, getPartById, getSupplierById, inventoryRecords, purchaseOrders, bills } = useData();
   const [editFG, setEditFG] = useState(null);
   const [editPart, setEditPart] = useState(null);
+  const [detailFG, setDetailFG] = useState(null); // FG detail modal (BOM + COGS)
+  const [search, setSearch] = useState('');
+  const [transferRow, setTransferRow] = useState(null); // { records, partName, sku }
   const pct = n => `${(n*100).toFixed(1)}%`;
+
+  // ── Build unified inventory rows ──────────────────────────────────────────
+
+  // Parts rows: aggregate all inventory records per part
+  const partRows = parts.map(p => {
+    const records = inventoryRecords.filter(r => r.partId === p.id);
+    const totalQty = records.reduce((s, r) => s + (r.qty || 0), 0);
+    const locations = [...new Set(records.map(r => r.location).filter(Boolean))];
+    const locationStr = locations.length === 0 ? '—'
+      : locations.length === 1 ? locations[0]
+      : `Multiple (${locations.length})`;
+    return {
+      id: p.id,
+      kind: 'part',
+      name: p.name,
+      sku: p.sku,
+      type: p.type,
+      supplier: getSupplierById(p.supplierId)?.shortName || '—',
+      location: locationStr,
+      qty: totalQty,
+      unitCost: p.unitCost,
+      freightCost: p.freightCost,
+      notes: p.notes || '—',
+      _part: p,
+    };
+  });
+
+  // FG rows: unit cost = landed COGS; location from POs+bills + manual records
+  const fgRows = finishedGoods.map(fg => {
+    const componentCost = fg.bom.reduce((s,l) => { const p=getPartById(l.partId); return s+(p?p.unitCost*l.qty:0); }, 0);
+    const freightTotal  = fg.bom.reduce((s,l) => { const p=getPartById(l.partId); return s+(p?p.freightCost*l.qty:0); }, 0);
+    const totalLanded   = componentCost + freightTotal + fg.assemblyCost;
+
+    // Gather qty + locations from PO items
+    const poLocations = [];
+    let poQty = 0;
+    purchaseOrders.forEach(po => {
+      po.items.filter(i => i.fgId === fg.id).forEach(i => {
+        const bill = bills.find(b => b.poId === po.id);
+        const shipStatus = bill?.shipmentStatus || 'open';
+        const loc = shipStatus === 'received' ? (bill?.receivedLocation || 'Warehouse')
+          : shipStatus === 'in-transit' ? 'In Transit'
+          : 'Factory — On Order';
+        poLocations.push(loc);
+        poQty += i.qty || 0;
+      });
+    });
+    // Manual FG inventory records
+    const manualRecords = inventoryRecords.filter(r => r.fgId === fg.id);
+    const manualLocations = manualRecords.map(r => r.location).filter(Boolean);
+    const manualQty = manualRecords.reduce((s, r) => s + (r.qty || 0), 0);
+
+    const allLocations = [...new Set([...poLocations, ...manualLocations])];
+    const locationStr = allLocations.length === 0 ? '—'
+      : allLocations.length === 1 ? allLocations[0]
+      : `Multiple (${allLocations.length})`;
+
+    return {
+      id: fg.id,
+      kind: 'fg',
+      name: fg.name,
+      sku: fg.sku,
+      type: 'Finished Good',
+      supplier: '—',
+      location: locationStr,
+      qty: poQty + manualQty,
+      unitCost: totalLanded,
+      freightCost: freightTotal,
+      notes: '—',
+      _fg: fg,
+      _componentCost: componentCost,
+      _freightTotal: freightTotal,
+      _totalLanded: totalLanded,
+    };
+  });
+
+  const allRows = [...partRows, ...fgRows];
+  const q = search.toLowerCase().trim();
+  const filtered = q
+    ? allRows.filter(r => [r.name, r.sku, r.type, r.supplier, r.location, r.notes].join(' ').toLowerCase().includes(q))
+    : allRows;
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+      {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>Bill of Materials & COGS</div>
-          <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>Click any SKU or part name to edit · Manage BOM and COGS for each finished good</div>
+          <div style={{ fontSize:22, fontWeight:700 }}>Inventory</div>
+          <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>
+            Click any row to view details or edit · FG unit cost reflects full landed COGS · Transfer button moves stock between locations
+          </div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
           <AddSupplierDialog /><AddPartDialog /><AddFinishedGoodDialog />
         </div>
       </div>
 
-      {/* Parts master list */}
+      {/* All Inventory */}
       <Card>
         <CardHeader>
-          <CardTitle><Icons.Package size={15} /> All Parts & Components</CardTitle>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <CardTitle><Icons.Package size={15} /> All Inventory</CardTitle>
+            <div style={{ position:'relative' }}>
+              <div style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}>
+                <Icons.Search size={13} color="hsl(220,10%,60%)" />
+              </div>
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search name, SKU, type, location…"
+                style={{ padding:'6px 28px 6px 28px', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:6, fontFamily:'inherit', outline:'none', width:240 }} />
+              {search && <button onClick={() => setSearch('')} style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'hsl(220,10%,56%)', fontSize:15, cursor:'pointer', lineHeight:1 }}>×</button>}
+            </div>
+          </div>
         </CardHeader>
         <CardContent style={{ padding:0 }}>
           <table>
             <thead>
               <tr style={{ background:'hsl(220,15%,96%)' }}>
-                <TH>Name</TH><TH>SKU</TH><TH>Type</TH><TH>Supplier</TH><TH right>Unit Cost</TH><TH right>Freight</TH><TH>Notes</TH>
+                <TH>Name</TH><TH>SKU</TH><TH>Type</TH><TH>Supplier</TH><TH>Location</TH><TH right>Qty</TH><TH right>Unit Cost</TH><TH right>Freight</TH><TH>Notes</TH><TH></TH>
               </tr>
             </thead>
             <tbody>
-              {parts.map(p => (
-                <tr key={p.id} style={{ cursor:'pointer' }}
+              {filtered.length === 0 && (
+                <tr><td colSpan={9} style={{ padding:'40px 14px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:13 }}>No items match your search.</td></tr>
+              )}
+              {filtered.map(r => {
+                const partRecords = r.kind === 'part'
+                  ? inventoryRecords.filter(inv => inv.partId === r._part?.id && inv.qty > 0)
+                  : [];
+                return (
+                <tr key={r.id} style={{ cursor:'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,98%)'}
                   onMouseLeave={e => e.currentTarget.style.background='white'}
-                  onClick={() => setEditPart(p)}>
-                  <td style={{ padding:'9px 14px', fontSize:13, fontWeight:500, borderBottom:'1px solid hsl(220,15%,92%)' }}>{p.name}</td>
-                  <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}><span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:600 }}>{p.sku}</span></td>
-                  <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}><Badge cls="badge-muted">{p.type}</Badge></td>
-                  <TD muted><span style={{ fontSize:12 }}>{getSupplierById(p.supplierId)?.shortName || '—'}</span></TD>
-                  <TD right mono>{fmt(p.unitCost)}</TD>
-                  <TD right mono muted>{fmt(p.freightCost)}</TD>
-                  <TD muted><span style={{ fontSize:12 }}>{p.notes||'—'}</span></TD>
+                  onClick={() => r.kind === 'fg' ? setDetailFG(r) : setEditPart(r._part)}>
+                  <td style={{ padding:'9px 14px', fontSize:13, fontWeight:500, borderBottom:'1px solid hsl(220,15%,92%)' }}>{r.name}</td>
+                  <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}>
+                    <span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:600 }}>{r.sku}</span>
+                  </td>
+                  <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}>
+                    <Badge cls={r.kind === 'fg' ? 'badge-primary' : 'badge-muted'}>{r.type}</Badge>
+                  </td>
+                  <TD muted><span style={{ fontSize:12 }}>{r.supplier}</span></TD>
+                  <td style={{ padding:'9px 14px', fontSize:12, borderBottom:'1px solid hsl(220,15%,92%)', color: r.location === '—' ? 'hsl(220,10%,72%)' : 'hsl(220,25%,10%)' }}>{r.location}</td>
+                  <TD right mono><span style={{ fontSize:12, color: r.qty === 0 ? 'hsl(220,10%,72%)' : 'inherit' }}>{r.qty > 0 ? r.qty.toLocaleString() : '—'}</span></TD>
+                  <TD right mono>{fmt(r.unitCost)}</TD>
+                  <TD right mono muted>{fmt(r.freightCost)}</TD>
+                  <TD muted><span style={{ fontSize:12 }}>{r.notes}</span></TD>
+                  <td style={{ padding:'6px 10px', borderBottom:'1px solid hsl(220,15%,92%)', textAlign:'right' }}>
+                    {r.kind === 'part' && partRecords.length > 0 && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setTransferRow({ records: partRecords, partName: r.name, sku: r.sku }); }}
+                        style={{ fontSize:11, fontWeight:600, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:5, padding:'4px 9px', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                        Transfer
+                      </button>
+                    )}
+                  </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </CardContent>
       </Card>
 
-      {finishedGoods.map(fg => {
-        const componentCost = fg.bom.reduce((s,l) => { const p=getPartById(l.partId); return s+(p?p.unitCost*l.qty:0); }, 0);
-        const freightTotal  = fg.bom.reduce((s,l) => { const p=getPartById(l.partId); return s+(p?p.freightCost*l.qty:0); }, 0);
-        const totalLanded   = componentCost + freightTotal + fg.assemblyCost;
+      {/* FG Detail Modal */}
+      {detailFG && (() => {
+        const fg = detailFG._fg;
+        const componentCost = detailFG._componentCost;
+        const freightTotal  = detailFG._freightTotal;
+        const totalLanded   = detailFG._totalLanded;
         const grossMargin   = fg.retailPrice - totalLanded;
-        const grossMarginPct = fg.retailPrice>0 ? grossMargin/fg.retailPrice : 0;
+        const grossMarginPct = fg.retailPrice > 0 ? grossMargin / fg.retailPrice : 0;
         return (
-          <Card key={fg.id}>
-            <CardHeader>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <CardTitle><Icons.Layers size={15} /> {fg.name}</CardTitle>
-                  <button onClick={() => setEditFG(fg)} style={{ fontSize:11, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'none', borderRadius:4, padding:'2px 8px', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
-                    Edit SKU
-                  </button>
-                </div>
-                <div style={{ textAlign:'right' }}>
-                  <div className="mono" style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{fg.sku}</div>
-                  <div className="mono" style={{ fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(totalLanded)} landed COGS</div>
-                </div>
+          <Modal title={fg.name} open={!!detailFG} onClose={() => setDetailFG(null)} wide
+            headerAction={
+              <button onClick={() => { setDetailFG(null); setEditFG(fg); }}
+                style={{ fontSize:11, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                Edit SKU
+              </button>
+            }>
+            <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+              <div style={{ display:'flex', gap:16, alignItems:'center' }}>
+                <span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:700 }}>{fg.sku}</span>
+                <span className="mono" style={{ fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(totalLanded)} landed COGS</span>
+                {fg.retailPrice > 0 && (
+                  <span style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>
+                    Retail {fmt(fg.retailPrice)} · Margin{' '}
+                    <strong style={{ color: grossMargin >= 0 ? 'hsl(160,60%,35%)' : 'hsl(0,72%,45%)' }}>
+                      {fmt(grossMargin)} ({pct(grossMarginPct)})
+                    </strong>
+                  </span>
+                )}
               </div>
-            </CardHeader>
-            <CardContent>
               <BOMEditor fgId={fg.id} bom={fg.bom} />
-              <div style={{ marginTop:16, paddingTop:12, borderTop:'1px solid hsl(220,15%,90%)', display:'flex', flexDirection:'column', gap:6 }}>
-                {[['Components', componentCost],['Freight-in', freightTotal],['Assembly & processing', fg.assemblyCost]].map(([label, val]) => (
+              <div style={{ paddingTop:12, borderTop:'1px solid hsl(220,15%,90%)', display:'flex', flexDirection:'column', gap:6 }}>
+                {[['Components', componentCost], ['Freight-in', freightTotal], ['Assembly & processing', fg.assemblyCost]].map(([label, val]) => (
                   <div key={label} style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
                     <span style={{ color:'hsl(220,10%,56%)' }}>{label}</span>
                     <span className="mono" style={{ fontWeight:600 }}>{fmt(val)}</span>
@@ -2469,27 +2793,33 @@ function BOMPage() {
                   <span>Total Landed COGS</span>
                   <span className="mono" style={{ color:'hsl(220,70%,45%)' }}>{fmt(totalLanded)}</span>
                 </div>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginTop:8, paddingTop:8, borderTop:'1px solid hsl(220,15%,90%)' }}>
-                  <span style={{ color:'hsl(220,10%,56%)' }}>Retail Price</span>
-                  <span className="mono" style={{ fontWeight:600 }}>{fmt(fg.retailPrice)}</span>
-                </div>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700 }}>
-                  <span>Gross Margin</span>
-                  <span className="mono" style={{ color: grossMargin>=0 ? 'hsl(160,60%,35%)' : 'hsl(0,72%,45%)' }}>
-                    {fmt(grossMargin)} ({pct(grossMarginPct)})
-                  </span>
-                </div>
+                {fg.retailPrice > 0 && <>
+                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginTop:8, paddingTop:8, borderTop:'1px solid hsl(220,15%,90%)' }}>
+                    <span style={{ color:'hsl(220,10%,56%)' }}>Retail Price</span>
+                    <span className="mono" style={{ fontWeight:600 }}>{fmt(fg.retailPrice)}</span>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700 }}>
+                    <span>Gross Margin</span>
+                    <span className="mono" style={{ color: grossMargin >= 0 ? 'hsl(160,60%,35%)' : 'hsl(0,72%,45%)' }}>
+                      {fmt(grossMargin)} ({pct(grossMarginPct)})
+                    </span>
+                  </div>
+                </>}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </Modal>
         );
-      })}
-      {finishedGoods.length===0 && (
-        <Card><CardContent style={{ padding:'48px 20px', textAlign:'center', color:'hsl(220,10%,56%)' }}>No finished goods yet. Click "+ Finished Good" above to create one.</CardContent></Card>
-      )}
+      })()}
 
       <EditPartDialog part={editPart} open={!!editPart} onClose={() => setEditPart(null)} />
       <EditFinishedGoodDialog fg={editFG} open={!!editFG} onClose={() => setEditFG(null)} />
+      <TransferDialog
+        records={transferRow?.records}
+        partName={transferRow?.partName}
+        sku={transferRow?.sku}
+        open={!!transferRow}
+        onClose={() => setTransferRow(null)}
+      />
     </div>
   );
 }
@@ -2499,6 +2829,7 @@ function SupplierDirectory({ navigate }) {
   const { suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders } = useData();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
+  const [viewMode, setViewMode] = useState('active'); // 'active' | 'archived' | 'all'
 
   // Build enriched supplier data
   const enriched = suppliers.map(s => {
@@ -2513,6 +2844,10 @@ function SupplierDirectory({ navigate }) {
       .filter(po => po.supplierId === s.id && po.orderStatus === 'submitted')
       .reduce((sum, po) => sum + po.totalCost, 0);
 
+    // Has records = any PO or any inventory for their parts → archive-only, no delete
+    const hasRecords = purchaseOrders.some(po => po.supplierId === s.id) ||
+      inventoryRecords.some(r => suppliedPartIds.includes(r.partId));
+
     const corpus = [
       s.name, s.shortName, s.city, s.country, s.email, s.phone,
       s.preferredPaymentMethod, s.paymentTerms,
@@ -2520,11 +2855,16 @@ function SupplierDirectory({ navigate }) {
       ...suppliedFGs.map(fg => `${fg.name} ${fg.sku}`),
     ].join(' ').toLowerCase();
 
-    return { s, suppliedParts, suppliedFGs, onOrderValue, corpus };
+    return { s, suppliedParts, suppliedFGs, onOrderValue, hasRecords, corpus };
   });
 
   const q = query.toLowerCase().trim();
   const filtered = q ? enriched.filter(e => e.corpus.includes(q)) : enriched;
+  const displayed = filtered.filter(e =>
+    viewMode === 'all' ? true :
+    viewMode === 'archived' ? e.s.archived === true :
+    e.s.archived !== true
+  );
 
   // Supplier detail modal content
   const SupplierDetailModal = ({ data }) => {
@@ -2539,7 +2879,7 @@ function SupplierDirectory({ navigate }) {
     }, [data?.s?.id]);
 
     if (!data) return null;
-    const { s, suppliedParts, suppliedFGs, onOrderValue } = data;
+    const { s, suppliedParts, suppliedFGs, onOrderValue, hasRecords } = data;
     const supPOs = purchaseOrders.filter(po => po.supplierId === s.id);
 
     const save = () => {
@@ -2556,6 +2896,16 @@ function SupplierDirectory({ navigate }) {
       setEditing(false);
     };
 
+    const handleArchive = () => {
+      updateSupplier(s.id, { archived: true });
+      toast.success(`${s.name} archived`);
+      setSelected(null);
+    };
+    const handleUnarchive = () => {
+      updateSupplier(s.id, { archived: false });
+      toast.success(`${s.name} unarchived`);
+      setSelected(null);
+    };
     const handleDelete = () => {
       if (!confirm(`Delete "${s.name}"? This cannot be undone.`)) return;
       deleteSupplier(s.id);
@@ -2567,14 +2917,28 @@ function SupplierDirectory({ navigate }) {
       <>
       <Modal title="" open={!!selected} onClose={() => { setSelected(null); setEditing(false); }} wide
         headerAction={!editing && (
-          <Btn variant="outline" size="sm" onClick={() => setEditing(true)}>Edit Supplier</Btn>
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            {s.archived ? (
+              <button onClick={handleUnarchive} style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:6, padding:'5px 12px', cursor:'pointer', fontFamily:'inherit' }}>
+                Unarchive
+              </button>
+            ) : hasRecords ? (
+              <button onClick={handleArchive} style={{ fontSize:12, fontWeight:600, color:'hsl(30,80%,45%)', background:'hsl(30,80%,96%)', border:'1px solid hsl(30,80%,82%)', borderRadius:6, padding:'5px 12px', cursor:'pointer', fontFamily:'inherit' }}>
+                Archive
+              </button>
+            ) : null}
+            <Btn variant="outline" size="sm" onClick={() => setEditing(true)}>Edit Supplier</Btn>
+          </div>
         )}>
         <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
 
           {/* Header */}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
             <div>
-              <div style={{ fontSize:20, fontWeight:700 }}>{s.name}</div>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:20, fontWeight:700 }}>{s.name}</span>
+                {s.archived && <Badge cls="badge-gray">Archived</Badge>}
+              </div>
               {(s.city || s.country) && (
                 <div style={{ fontSize:13, color:'hsl(220,10%,56%)', display:'flex', alignItems:'center', gap:4, marginTop:4 }}>
                   <Icons.MapPin color="hsl(220,10%,56%)" />{[s.city, s.country].filter(Boolean).join(', ')}
@@ -2621,9 +2985,19 @@ function SupplierDirectory({ navigate }) {
               </div>
               <Field label="Notes"><Input {...fld('notes')} placeholder="Optional notes…" /></Field>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <button onClick={handleDelete} style={{ fontSize:12, color:'hsl(0,72%,51%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
-                  Delete supplier
-                </button>
+                {s.archived ? (
+                  <button onClick={handleUnarchive} style={{ fontSize:12, color:'hsl(220,70%,45%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                    Unarchive supplier
+                  </button>
+                ) : hasRecords ? (
+                  <button onClick={handleArchive} style={{ fontSize:12, color:'hsl(30,80%,45%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                    Archive supplier
+                  </button>
+                ) : (
+                  <button onClick={handleDelete} style={{ fontSize:12, color:'hsl(0,72%,51%)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                    Delete supplier
+                  </button>
+                )}
                 <div style={{ display:'flex', gap:8 }}>
                   <Btn variant="ghost" onClick={() => { setEditing(false); setF({...s}); }}>Cancel</Btn>
                   <Btn onClick={save}>Save Changes</Btn>
@@ -2741,10 +3115,27 @@ function SupplierDirectory({ navigate }) {
         <div>
           <div style={{ fontSize:22, fontWeight:700 }}>Supplier Directory</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>
-            {filtered.length} of {suppliers.length} suppliers
+            {displayed.length} supplier{displayed.length !== 1 ? 's' : ''}
+            {viewMode !== 'all' && ` · ${enriched.filter(e => e.s.archived === true).length} archived`}
           </div>
         </div>
-        <AddSupplierDialog />
+        <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+          {/* View toggle */}
+          <div style={{ display:'flex', background:'hsl(220,15%,93%)', borderRadius:8, padding:3 }}>
+            {['active','archived','all'].map(mode => (
+              <button key={mode} onClick={() => setViewMode(mode)} style={{
+                padding:'5px 12px', fontSize:12, fontWeight:600, borderRadius:6, border:'none', cursor:'pointer', fontFamily:'inherit',
+                background: viewMode === mode ? 'white' : 'transparent',
+                color: viewMode === mode ? 'hsl(220,70%,45%)' : 'hsl(220,10%,56%)',
+                boxShadow: viewMode === mode ? '0 1px 3px rgba(0,0,0,.12)' : 'none',
+                transition: 'all .15s',
+              }}>
+                {{ active:'Active', archived:'Archived', all:'All' }[mode]}
+              </button>
+            ))}
+          </div>
+          <AddSupplierDialog />
+        </div>
       </div>
 
       {/* Search */}
@@ -2782,10 +3173,12 @@ function SupplierDirectory({ navigate }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
-                <tr><td colSpan={3} style={{ padding:'40px 14px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:13 }}>No suppliers match your search.</td></tr>
+              {displayed.length === 0 && (
+                <tr><td colSpan={3} style={{ padding:'40px 14px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:13 }}>
+                  {viewMode === 'archived' ? 'No archived suppliers.' : 'No suppliers match your search.'}
+                </td></tr>
               )}
-              {filtered.map(row => {
+              {displayed.map(row => {
                 const { s, onOrderValue } = row;
                 return (
                   <tr key={s.id} style={{ cursor:'pointer' }}
@@ -2793,7 +3186,10 @@ function SupplierDirectory({ navigate }) {
                     onMouseLeave={e => e.currentTarget.style.background='white'}
                     onClick={() => setSelected(row)}>
                     <TD>
-                      <div style={{ fontWeight:600, fontSize:13 }}>{s.name}</div>
+                      <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+                        <span style={{ fontWeight:600, fontSize:13 }}>{s.name}</span>
+                        {s.archived && <Badge cls="badge-gray">Archived</Badge>}
+                      </div>
                       {(s.city || s.country) && (
                         <div style={{ fontSize:12, color:'hsl(220,10%,56%)', display:'flex', alignItems:'center', gap:3, marginTop:2 }}>
                           <Icons.MapPin size={11} color="hsl(220,10%,56%)" />
@@ -2815,12 +3211,12 @@ function SupplierDirectory({ navigate }) {
                 );
               })}
             </tbody>
-            {filtered.length > 0 && (
+            {displayed.length > 0 && (
               <tfoot>
                 <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
                   <td colSpan={2} style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
                   <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(220,70%,45%)' }}>
-                    {fmt(filtered.reduce((s,r) => s + r.onOrderValue, 0))}
+                    {fmt(displayed.reduce((s,r) => s + r.onOrderValue, 0))}
                   </td>
                 </tr>
               </tfoot>
@@ -4530,8 +4926,7 @@ const navItems = [
   { id:'pos',         label:'Purchase Orders', Icon: Icons.Clipboard },
   { id:'bills',       label:'Supplier Bills',    Icon: Icons.Dollar    },
   { id:'workorders',  label:'Work Orders',     Icon: Icons.Layers    },
-  { id:'inventory',   label:'Inventory',       Icon: Icons.Package   },
-  { id:'bom',         label:'BOM & COGS',      Icon: Icons.Layers    },
+  { id:'bom',         label:'Inventory',       Icon: Icons.Package   },
   { id:'suppliers',   label:'Suppliers',       Icon: Icons.Users     },
   { id:'ledger',      label:'General Ledger',  Icon: Icons.File      },
   { id:'activity',    label:'Activity Log',    Icon: Icons.Clipboard },

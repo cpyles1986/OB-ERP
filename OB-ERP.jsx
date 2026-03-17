@@ -437,7 +437,7 @@ function StatCard({ title, value, subtitle, icon: Icon, variant='default' }) {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
           <div>
             <div style={{ fontSize:11, fontWeight:500, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:6 }}>{title}</div>
-            <div className="mono" style={{ fontSize:24, fontWeight:700, color: variantColor[variant]||variantColor.default }}>{value}</div>
+            <div style={{ fontSize:24, fontWeight:700, color: variantColor[variant]||variantColor.default }}>{value}</div>
             {subtitle && <div style={{ fontSize:12, color:'hsl(220,10%,56%)', marginTop:4 }}>{subtitle}</div>}
           </div>
           {Icon && (
@@ -914,7 +914,7 @@ function CreatePODialog() {
             </div>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:8 }}>
               <Btn variant="outline" size="sm" onClick={addItem}><Icons.Plus /> Add Line</Btn>
-              {totalCost>0 && <span className="mono" style={{ fontSize:13, fontWeight:600 }}>Total: {fmt(totalCost)}</span>}
+              {totalCost>0 && <span style={{ fontSize:13, fontWeight:600 }}>Total: {fmt(totalCost)}</span>}
             </div>
           </div>
 
@@ -1199,7 +1199,7 @@ function PODetail({ po, open, onClose, onBack }) {
               </div>
               <div style={{ marginLeft:'auto', textAlign:'right' }}>
                 <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Balance Due</div>
-                <div className="mono" style={{ fontSize:20, fontWeight:700, color:'hsl(38,80%,35%)' }}>
+                <div style={{ fontSize:20, fontWeight:700, color:'hsl(38,80%,35%)' }}>
                   {fmt(((billF.lineItems||[]).length > 0 ? billLineItemsTotal : (existingBill?.amount||0)) - (parseFloat(billF.amountPaid)||0))}
                 </div>
               </div>
@@ -1226,9 +1226,9 @@ function PODetail({ po, open, onClose, onBack }) {
                     <tr key={idx} style={{ borderBottom:'1px solid hsl(220,15%,92%)' }}>
                       <td style={{ padding:'4px 6px' }}><input value={line.description} onChange={e => updateBillLineItem(idx,{description:e.target.value})} style={{ width:'100%', padding:'5px 8px', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:5, fontFamily:'inherit', background:'white' }} /></td>
                       <td style={{ padding:'4px 6px' }}><input value={line.sku} onChange={e => updateBillLineItem(idx,{sku:e.target.value})} style={{ width:'100%', padding:'5px 8px', fontSize:11, fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} /></td>
-                      <td style={{ padding:'4px 6px', textAlign:'right' }}><input type="number" min="0" value={line.qty} onChange={e => updateBillLineItem(idx,{qty:parseFloat(e.target.value)||0})} style={{ width:64, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} /></td>
-                      <td style={{ padding:'4px 6px', textAlign:'right' }}><input type="number" step="0.01" min="0" value={line.unitPrice} onChange={e => updateBillLineItem(idx,{unitPrice:parseFloat(e.target.value)||0})} style={{ width:80, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} /></td>
-                      <td style={{ padding:'4px 10px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:12, fontWeight:600, whiteSpace:'nowrap' }}>{fmt((parseFloat(line.qty)||0)*(parseFloat(line.unitPrice)||0))}</td>
+                      <td style={{ padding:'4px 6px', textAlign:'right' }}><input type="number" min="0" value={line.qty} onChange={e => updateBillLineItem(idx,{qty:parseFloat(e.target.value)||0})} style={{ width:64, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'inherit', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} /></td>
+                      <td style={{ padding:'4px 6px', textAlign:'right' }}><input type="number" step="0.01" min="0" value={line.unitPrice} onChange={e => updateBillLineItem(idx,{unitPrice:parseFloat(e.target.value)||0})} style={{ width:80, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'inherit', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} /></td>
+                      <td style={{ padding:'4px 10px', textAlign:'right', fontFamily:'inherit', fontSize:12, fontWeight:600, whiteSpace:'nowrap' }}>{fmt((parseFloat(line.qty)||0)*(parseFloat(line.unitPrice)||0))}</td>
                       <td style={{ padding:'4px 6px', textAlign:'center' }}><button type="button" onClick={() => removeBillLineItem(idx)} style={{ background:'none', border:'none', color:'hsl(0,60%,60%)', cursor:'pointer', fontSize:14 }}>✕</button></td>
                     </tr>
                   ))}
@@ -1236,7 +1236,7 @@ function PODetail({ po, open, onClose, onBack }) {
                 {(billF.lineItems||[]).length > 0 && (
                   <tfoot><tr>
                     <td colSpan={4} style={{ padding:'8px 10px', textAlign:'right', fontWeight:600, fontSize:13, borderTop:'2px solid hsl(220,15%,85%)' }}>Total</td>
-                    <td style={{ padding:'8px 10px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontWeight:700, fontSize:14, borderTop:'2px solid hsl(220,15%,85%)' }}>{fmt(billLineItemsTotal)}</td>
+                    <td style={{ padding:'8px 10px', textAlign:'right', fontFamily:'inherit', fontWeight:700, fontSize:14, borderTop:'2px solid hsl(220,15%,85%)' }}>{fmt(billLineItemsTotal)}</td>
                     <td style={{ borderTop:'2px solid hsl(220,15%,85%)' }}/>
                   </tr></tfoot>
                 )}
@@ -1373,9 +1373,9 @@ function PODetail({ po, open, onClose, onBack }) {
                       </div>
                     </TD>
                     <TD><span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:500 }}>{sku}</span></TD>
-                    <TD right mono>{item.qty.toLocaleString()}</TD>
-                    <TD right mono>{fmt(item.unitCost)}</TD>
-                    <TD right mono bold>{fmt(item.qty*item.unitCost)}</TD>
+                    <TD right>{item.qty.toLocaleString()}</TD>
+                    <TD right>{fmt(item.unitCost)}</TD>
+                    <TD right bold>{fmt(item.qty*item.unitCost)}</TD>
                   </tr>
                 );
               })}
@@ -1383,7 +1383,7 @@ function PODetail({ po, open, onClose, onBack }) {
             <tfoot>
               <tr>
                 <td colSpan={4} style={{ padding:'10px 14px', textAlign:'right', fontWeight:600, borderTop:'2px solid hsl(220,15%,85%)' }}>Total</td>
-                <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontWeight:700, fontSize:16, borderTop:'2px solid hsl(220,15%,85%)' }}>{fmt(po.totalCost)}</td>
+                <td style={{ padding:'10px 14px', textAlign:'right', fontWeight:700, fontSize:16, borderTop:'2px solid hsl(220,15%,85%)' }}>{fmt(po.totalCost)}</td>
               </tr>
             </tfoot>
           </table>
@@ -1576,7 +1576,7 @@ function EditPODialog({ po, open, onClose, onSaved }) {
           </div>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:8 }}>
             <Btn variant="outline" size="sm" onClick={addItem}><Icons.Plus /> Add Line</Btn>
-            {totalCost>0 && <span className="mono" style={{ fontSize:13, fontWeight:600 }}>Total: {fmt(totalCost)}</span>}
+            {totalCost>0 && <span style={{ fontSize:13, fontWeight:600 }}>Total: {fmt(totalCost)}</span>}
           </div>
         </div>
 
@@ -1631,15 +1631,15 @@ function BOMEditor({ fgId, bom }) {
           <div key={line.partId} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:6, background:'hsl(220,15%,96%)', marginBottom:4 }}>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:13, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{part.name}</div>
-              <div className="mono" style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{part.sku}</div>
+              <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{part.sku}</div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
               <input type="number" min={1} value={line.qty}
                 onChange={e => updateQty(line.partId, parseInt(e.target.value)||1)}
                 style={{ width:48, height:28, textAlign:'center', fontFamily:'JetBrains Mono,monospace', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:4, padding:'0 4px' }} />
-              <span className="mono" style={{ fontSize:12, width:64, textAlign:'right' }}>{fmt(part.unitCost)}</span>
-              <span className="mono" style={{ fontSize:12, width:64, textAlign:'right', color:'hsl(220,10%,56%)' }}>{fmt(part.freightCost)}</span>
-              <span className="mono" style={{ fontSize:12, width:64, textAlign:'right', fontWeight:600 }}>{fmt(landed)}</span>
+              <span style={{ fontSize:12, width:64, textAlign:'right' }}>{fmt(part.unitCost)}</span>
+              <span style={{ fontSize:12, width:64, textAlign:'right', color:'hsl(220,10%,56%)' }}>{fmt(part.freightCost)}</span>
+              <span style={{ fontSize:12, width:64, textAlign:'right', fontWeight:600 }}>{fmt(landed)}</span>
               <button onClick={() => removeLine(line.partId)} style={{ width:28, height:28, border:'none', background:'none', color:'hsl(0,60%,60%)', borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center' }}><Icons.Trash /></button>
             </div>
           </div>
@@ -1656,8 +1656,8 @@ function BOMEditor({ fgId, bom }) {
 
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:10, paddingTop:10, borderTop:'1px solid hsl(220,15%,90%)' }}>
         <div style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>
-          Components: <strong className="mono">{fmt(totalComp)}</strong>
-          &nbsp;&nbsp;Freight: <strong className="mono">{fmt(totalFreight)}</strong>
+          Components: <strong>{fmt(totalComp)}</strong>
+          &nbsp;&nbsp;Freight: <strong>{fmt(totalFreight)}</strong>
         </div>
         {dirty && <Btn size="sm" onClick={save}><Icons.Check /> Save BOM</Btn>}
       </div>
@@ -1758,7 +1758,7 @@ function Dashboard({ setPage }) {
                   <div style={{ fontSize:12, color:'hsl(220,10%,56%)', marginTop:2 }}>{locations.join(' · ')}</div>
                 </div>
                 <div style={{ textAlign:'right' }}>
-                  <div className="mono" style={{ fontSize:13, fontWeight:700 }}>{totalQty.toLocaleString()}</div>
+                  <div style={{ fontSize:13, fontWeight:700 }}>{totalQty.toLocaleString()}</div>
                   <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{fmt(part.unitCost)}/ea</div>
                 </div>
               </div>
@@ -1793,14 +1793,14 @@ function Dashboard({ setPage }) {
                   </div>
                   <div style={{ textAlign:'right', display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
                     <Badge cls={shipCls}>{shipLabel}</Badge>
-                    <div className="mono" style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>{fmt(po.totalCost)}</div>
+                    <div style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>{fmt(po.totalCost)}</div>
                   </div>
                 </div>
               );
             })}
             <div style={{ padding:'12px 16px', borderTop:'1px solid hsl(220,15%,90%)', display:'flex', justifyContent:'space-between', fontSize:13 }}>
               <span style={{ color:'hsl(220,10%,56%)' }}>Unit COGS</span>
-              <span className="mono" style={{ fontWeight:600 }}>{fmt(totalUnitCost)}</span>
+              <span style={{ fontWeight:600 }}>{fmt(totalUnitCost)}</span>
             </div>
           </CardContent>
         </Card>
@@ -1830,7 +1830,7 @@ function Dashboard({ setPage }) {
                     </div>
                   </div>
                   <div style={{ textAlign:'right' }}>
-                    <div className="mono" style={{ fontSize:13, fontWeight:700 }}>{fmt(data.value)}</div>
+                    <div style={{ fontSize:13, fontWeight:700 }}>{fmt(data.value)}</div>
                     <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{data.qty.toLocaleString()} units</div>
                   </div>
                 </div>
@@ -1838,7 +1838,7 @@ function Dashboard({ setPage }) {
               {inventoryByLocation.length > 0 && (
                 <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, fontSize:13 }}>
                   <span style={{ color:'hsl(220,10%,56%)' }}>Total</span>
-                  <span className="mono" style={{ fontWeight:700 }}>{fmt(componentInventoryValue)}</span>
+                  <span style={{ fontWeight:700 }}>{fmt(componentInventoryValue)}</span>
                 </div>
               )}
             </CardContent>
@@ -1877,7 +1877,7 @@ function Dashboard({ setPage }) {
                         </div>
                       </div>
                       <div style={{ textAlign:'right' }}>
-                        <div className="mono" style={{
+                        <div style={{
                           fontSize:13, fontWeight:700,
                           color: delta === 0 ? 'hsl(220,10%,40%)' : delta > 0 ? 'hsl(0,65%,45%)' : 'hsl(140,55%,35%)',
                         }}>
@@ -1891,7 +1891,7 @@ function Dashboard({ setPage }) {
                   ))}
                   <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, fontSize:13 }}>
                     <span style={{ color:'hsl(220,10%,56%)' }}>Net delta</span>
-                    <span className="mono" style={{
+                    <span style={{
                       fontWeight:700,
                       color: totalBillDelta === 0 ? 'hsl(220,10%,40%)' : totalBillDelta > 0 ? 'hsl(0,65%,45%)' : 'hsl(140,55%,35%)',
                     }}>
@@ -1929,7 +1929,7 @@ function Dashboard({ setPage }) {
                     <TD mono><span style={{ color:'hsl(220,70%,45%)', fontSize:12 }}>{po.poNumber}</span></TD>
                     <TD>{supplier?.shortName}</TD>
                     <TD muted><span style={{ fontSize:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block', maxWidth:200 }}>{itemNames}</span></TD>
-                    <TD mono>{fmt(po.totalCost)}</TD>
+                    <TD>{fmt(po.totalCost)}</TD>
                     <TD><Badge cls={orderStatusCls[po.orderStatus]}>{po.orderStatus}</Badge></TD>
                     <TD muted>{po.dateOrdered}</TD>
                   </tr>
@@ -1967,7 +1967,7 @@ function Dashboard({ setPage }) {
                   borderBottom: i < arr.length-1 ? '1px solid hsl(220,15%,93%)' : 'none',
                 }}>
                   <Badge cls={typeCls[e.type]||'badge-muted'}>{typeLabel[e.type]||e.type}</Badge>
-                  <span className="mono" style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)', minWidth:120 }}>{e.entity}</span>
+                  <span style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)', minWidth:120 }}>{e.entity}</span>
                   <span style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>{e.field}</span>
                   <span style={{ fontSize:12, fontWeight:500 }}>{e.from}</span>
                   <span style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>→</span>
@@ -2205,7 +2205,7 @@ function InventoryPage() {
         <div>
           <div style={{ fontSize:22, fontWeight:700 }}>Inventory</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>
-            {filtered.length} records · {totalQty.toLocaleString()} units · <strong className="mono">{fmt(totalValue)}</strong> total value
+            {filtered.length} records · {totalQty.toLocaleString()} units · <strong>{fmt(totalValue)}</strong> total value
           </div>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -2303,15 +2303,15 @@ function InventoryPage() {
                               style={{ background:'hsl(220,70%,45%)', color:'white', border:'none', borderRadius:4, padding:'3px 7px', fontSize:11, cursor:'pointer' }}>✓</button>
                           </div>
                         ) : (
-                          <span className="mono" style={{ fontWeight:600, cursor:'pointer', color:'hsl(220,25%,10%)' }}
+                          <span style={{ fontWeight:600, cursor:'pointer', color:'hsl(220,25%,10%)' }}
                             onClick={() => { setEditingId(r.id); setEditQty(String(r.qty)); }}
                             title="Click to edit qty">
                             {r.qty.toLocaleString()}
                           </span>
                         )}
                       </td>
-                      <TD right mono><span style={{ fontSize:12 }}>{fmt(r.unitCost)}</span></TD>
-                      <TD right mono bold>{fmt(r.value)}</TD>
+                      <TD right><span style={{ fontSize:12 }}>{fmt(r.unitCost)}</span></TD>
+                      <TD right bold>{fmt(r.value)}</TD>
                       <TD><Badge cls={statusCls[r.status]||'badge-muted'}>{statusLabel[r.status]||r.status}</Badge></TD>
                       <TD muted><span style={{ fontSize:12 }}>{r.date}</span></TD>
                       <td style={{ padding:'9px 8px', borderBottom:'1px solid hsl(220,15%,92%)', verticalAlign:'middle' }}>
@@ -2333,9 +2333,9 @@ function InventoryPage() {
               <tfoot>
                 <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
                   <td colSpan={view==='part' ? 6 : 5} style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{totalQty.toLocaleString()}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13 }}>{totalQty.toLocaleString()}</td>
                   <td/>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(220,70%,45%)' }}>{fmt(totalValue)}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13, color:'hsl(220,70%,45%)' }}>{fmt(totalValue)}</td>
                   <td colSpan={3}/>
                 </tr>
               </tfoot>
@@ -2386,7 +2386,7 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
         <div>
           <div style={{ fontSize:22, fontWeight:700 }}>Purchase Orders</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>
-            {purchaseOrders.length} total · {openPOs.length} open · Total spend: <strong className="mono">{fmt(totalSpend)}</strong>
+            {purchaseOrders.length} total · {openPOs.length} open · Total spend: <strong>{fmt(totalSpend)}</strong>
           </div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
@@ -2435,7 +2435,7 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
                         })}
                       </div>
                     </TD>
-                    <TD right mono bold>{fmt(po.totalCost)}</TD>
+                    <TD right bold>{fmt(po.totalCost)}</TD>
                     <td style={{ padding:'8px 14px' }}>
                       <InlineStatusSelect
                         value={po.orderStatus}
@@ -2523,7 +2523,7 @@ function TransferDialog({ records, partName, sku, open, onClose }) {
         )}
         {records.length === 1 && (
           <div style={{ fontSize:13, color:'hsl(220,10%,40%)' }}>
-            From: <strong>{source.location}</strong> · <span className="mono">{source.qty}</span> available
+            From: <strong>{source.location}</strong> · <span>{source.qty}</span> available
           </div>
         )}
         <Field label="Quantity">
@@ -2732,9 +2732,9 @@ function BOMPage() {
                   </td>
                   <TD muted><span style={{ fontSize:12 }}>{r.supplier}</span></TD>
                   <td style={{ padding:'9px 14px', fontSize:12, borderBottom:'1px solid hsl(220,15%,92%)', color: r.location === '—' ? 'hsl(220,10%,72%)' : 'hsl(220,25%,10%)' }}>{r.location}</td>
-                  <TD right mono><span style={{ fontSize:12, color: r.qty === 0 ? 'hsl(220,10%,72%)' : 'inherit' }}>{r.qty > 0 ? r.qty.toLocaleString() : '—'}</span></TD>
-                  <TD right mono>{fmt(r.unitCost)}</TD>
-                  <TD right mono muted>{fmt(r.freightCost)}</TD>
+                  <TD right><span style={{ fontSize:12, color: r.qty === 0 ? 'hsl(220,10%,72%)' : 'inherit' }}>{r.qty > 0 ? r.qty.toLocaleString() : '—'}</span></TD>
+                  <TD right>{fmt(r.unitCost)}</TD>
+                  <TD right muted>{fmt(r.freightCost)}</TD>
                   <TD muted><span style={{ fontSize:12 }}>{r.notes}</span></TD>
                   <td style={{ padding:'6px 10px', borderBottom:'1px solid hsl(220,15%,92%)', textAlign:'right' }}>
                     {r.kind === 'part' && partRecords.length > 0 && (
@@ -2772,7 +2772,7 @@ function BOMPage() {
             <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
               <div style={{ display:'flex', gap:16, alignItems:'center' }}>
                 <span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:700 }}>{fg.sku}</span>
-                <span className="mono" style={{ fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(totalLanded)} landed COGS</span>
+                <span style={{ fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(totalLanded)} landed COGS</span>
                 {fg.retailPrice > 0 && (
                   <span style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>
                     Retail {fmt(fg.retailPrice)} · Margin{' '}
@@ -2787,21 +2787,21 @@ function BOMPage() {
                 {[['Components', componentCost], ['Freight-in', freightTotal], ['Assembly & processing', fg.assemblyCost]].map(([label, val]) => (
                   <div key={label} style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
                     <span style={{ color:'hsl(220,10%,56%)' }}>{label}</span>
-                    <span className="mono" style={{ fontWeight:600 }}>{fmt(val)}</span>
+                    <span style={{ fontWeight:600 }}>{fmt(val)}</span>
                   </div>
                 ))}
                 <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700, paddingTop:6, borderTop:'1px solid hsl(220,15%,90%)' }}>
                   <span>Total Landed COGS</span>
-                  <span className="mono" style={{ color:'hsl(220,70%,45%)' }}>{fmt(totalLanded)}</span>
+                  <span style={{ color:'hsl(220,70%,45%)' }}>{fmt(totalLanded)}</span>
                 </div>
                 {fg.retailPrice > 0 && <>
                   <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginTop:8, paddingTop:8, borderTop:'1px solid hsl(220,15%,90%)' }}>
                     <span style={{ color:'hsl(220,10%,56%)' }}>Retail Price</span>
-                    <span className="mono" style={{ fontWeight:600 }}>{fmt(fg.retailPrice)}</span>
+                    <span style={{ fontWeight:600 }}>{fmt(fg.retailPrice)}</span>
                   </div>
                   <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700 }}>
                     <span>Gross Margin</span>
-                    <span className="mono" style={{ color: grossMargin >= 0 ? 'hsl(160,60%,35%)' : 'hsl(0,72%,45%)' }}>
+                    <span style={{ color: grossMargin >= 0 ? 'hsl(160,60%,35%)' : 'hsl(0,72%,45%)' }}>
                       {fmt(grossMargin)} ({pct(grossMarginPct)})
                     </span>
                   </div>
@@ -2954,7 +2954,7 @@ function SupplierDirectory({ navigate }) {
                 onMouseLeave={e => e.currentTarget.style.background='hsl(220,70%,96%)'}
               >
                 <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,70%,40%)', marginBottom:3 }}>On Order ↗</div>
-                <div className="mono" style={{ fontSize:17, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(onOrderValue)}</div>
+                <div style={{ fontSize:17, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(onOrderValue)}</div>
                 <div style={{ fontSize:10, color:'hsl(220,70%,55%)', marginTop:2 }}>click to view POs</div>
               </div>
             </div>
@@ -3051,7 +3051,7 @@ function SupplierDirectory({ navigate }) {
                       <div key={p.id} style={{ background:'hsl(220,15%,95%)', borderRadius:6, padding:'4px 10px', fontSize:12 }}>
                         <span style={{ fontWeight:500 }}>{p.name}</span>
                         <span className="mono" style={{ color:'hsl(220,10%,56%)', marginLeft:6, fontSize:11 }}>{p.sku}</span>
-                        <span className="mono" style={{ color:'hsl(220,70%,45%)', marginLeft:6, fontSize:11 }}>{fmt(p.unitCost)}</span>
+                        <span style={{ color:'hsl(220,70%,45%)', marginLeft:6, fontSize:11 }}>{fmt(p.unitCost)}</span>
                       </div>
                     ))}
                   </div>
@@ -3092,7 +3092,7 @@ function SupplierDirectory({ navigate }) {
                       onMouseLeave={e => e.currentTarget.style.background='white'}
                       onClick={() => setPreviewPO(po)}>
                       <TD><span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:600 }}>{po.poNumber}</span></TD>
-                      <TD right mono bold>{fmt(po.totalCost)}</TD>
+                      <TD right bold>{fmt(po.totalCost)}</TD>
                       <TD><Badge cls={orderStatusCls[po.orderStatus]}>{{ draft:'Draft', 'pending-approval':'Pending Approval', approved:'Approved', submitted:'Submitted' }[po.orderStatus] || po.orderStatus}</Badge></TD>
                       <TD muted>{po.dateOrdered}</TD>
                       <TD muted><span style={{ fontSize:11, color:'hsl(220,70%,55%)' }}>view ↗</span></TD>
@@ -3204,7 +3204,7 @@ function SupplierDirectory({ navigate }) {
                       {!s.email && !s.phone && <span style={{ color:'hsl(220,10%,72%)', fontSize:12 }}>—</span>}
                     </TD>
                     <TD right>
-                      <span className="mono" style={{ fontWeight:600, color: onOrderValue > 0 ? 'hsl(220,70%,45%)' : 'hsl(220,10%,56%)' }}>
+                      <span style={{ fontWeight:600, color: onOrderValue > 0 ? 'hsl(220,70%,45%)' : 'hsl(220,10%,56%)' }}>
                         {fmt(onOrderValue)}
                       </span>
                     </TD>
@@ -3216,7 +3216,7 @@ function SupplierDirectory({ navigate }) {
               <tfoot>
                 <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
                   <td colSpan={2} style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(220,70%,45%)' }}>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13, color:'hsl(220,70%,45%)' }}>
                     {fmt(displayed.reduce((s,r) => s + r.onOrderValue, 0))}
                   </td>
                 </tr>
@@ -3362,7 +3362,7 @@ function LedgerPage() {
                       const borderB = isLast ? '2px solid hsl(220,15%,88%)' : '1px solid hsl(220,15%,94%)';
                       return (
                         <tr key={`${je.id}-${li}`} style={{ background: rowBg }}>
-                          <td style={{ padding:'7px 14px', fontSize:12, borderBottom: borderB, verticalAlign:'middle', color:'hsl(220,10%,56%)', fontFamily:'JetBrains Mono,monospace', whiteSpace:'nowrap' }}>
+                          <td style={{ padding:'7px 14px', fontSize:12, borderBottom: borderB, verticalAlign:'middle', color:'hsl(220,10%,56%)', fontFamily:'inherit', whiteSpace:'nowrap' }}>
                             {isFirst ? je.date : ''}
                           </td>
                           <td style={{ padding:'7px 14px', fontSize:12, borderBottom: borderB, verticalAlign:'middle', maxWidth:260 }}>
@@ -3375,10 +3375,10 @@ function LedgerPage() {
                             <span className="mono" style={{ color:'hsl(220,10%,56%)', fontSize:11 }}>{acct?.number}</span>
                             <span style={{ marginLeft:8, fontWeight: line.debit > 0 ? 500 : 400 }}>{acct?.name || line.accountId}</span>
                           </td>
-                          <td style={{ padding:'7px 14px', textAlign:'right', borderBottom: borderB, verticalAlign:'middle', fontFamily:'JetBrains Mono,monospace', fontSize:12, fontWeight: line.debit > 0 ? 600 : 400, color: line.debit > 0 ? 'hsl(220,25%,10%)' : 'transparent' }}>
+                          <td style={{ padding:'7px 14px', textAlign:'right', borderBottom: borderB, verticalAlign:'middle', fontFamily:'inherit', fontSize:12, fontWeight: line.debit > 0 ? 600 : 400, color: line.debit > 0 ? 'hsl(220,25%,10%)' : 'transparent' }}>
                             {line.debit > 0 ? fmt(line.debit) : '—'}
                           </td>
-                          <td style={{ padding:'7px 14px', textAlign:'right', borderBottom: borderB, verticalAlign:'middle', fontFamily:'JetBrains Mono,monospace', fontSize:12, fontWeight: line.credit > 0 ? 600 : 400, color: line.credit > 0 ? 'hsl(220,25%,10%)' : 'transparent' }}>
+                          <td style={{ padding:'7px 14px', textAlign:'right', borderBottom: borderB, verticalAlign:'middle', fontFamily:'inherit', fontSize:12, fontWeight: line.credit > 0 ? 600 : 400, color: line.credit > 0 ? 'hsl(220,25%,10%)' : 'transparent' }}>
                             {line.credit > 0 ? fmt(line.credit) : '—'}
                           </td>
                           <td style={{ padding:'7px 8px', borderBottom: borderB, verticalAlign:'middle' }}>
@@ -3400,8 +3400,8 @@ function LedgerPage() {
                 <tfoot>
                   <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
                     <td colSpan={4} style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
-                    <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(totalDebits)}</td>
-                    <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(totalCredits)}</td>
+                    <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13 }}>{fmt(totalDebits)}</td>
+                    <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13 }}>{fmt(totalCredits)}</td>
                     <td/>
                   </tr>
                 </tfoot>
@@ -3438,14 +3438,14 @@ function LedgerPage() {
                         <td style={{ padding:'8px 14px', fontSize:13, fontWeight:500, borderBottom:'1px solid hsl(220,15%,92%)' }}>{a.name}</td>
                         <td style={{ padding:'8px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}><Badge cls="badge-muted">{a.type}</Badge></td>
                         <td style={{ padding:'8px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}><Badge cls={a.normal==='debit'?'badge-primary':'badge-green'}>{a.normal}</Badge></td>
-                        <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, fontWeight:600, borderBottom:'1px solid hsl(220,15%,92%)', color: (balances[a.id]||0) < 0 ? 'hsl(0,72%,51%)' : 'hsl(220,25%,10%)' }}>
+                        <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13, fontWeight:600, borderBottom:'1px solid hsl(220,15%,92%)', color: (balances[a.id]||0) < 0 ? 'hsl(0,72%,51%)' : 'hsl(220,25%,10%)' }}>
                           {fmt(balances[a.id] || 0)}
                         </td>
                       </tr>
                     )),
                     <tr key={`tot-${type}`} style={{ background:'hsl(220,15%,96%)' }}>
                       <td colSpan={4} style={{ padding:'8px 14px', fontSize:12, fontWeight:700, textAlign:'right', borderTop:'1px solid hsl(220,15%,85%)' }}>Total {typeLabel[type]}</td>
-                      <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, fontWeight:700, borderTop:'1px solid hsl(220,15%,85%)' }}>{fmt(groupTotal)}</td>
+                      <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13, fontWeight:700, borderTop:'1px solid hsl(220,15%,85%)' }}>{fmt(groupTotal)}</td>
                     </tr>
                   ];
                 })}
@@ -3466,7 +3466,7 @@ function LedgerPage() {
             ].map(({ label, val, color }) => (
               <div key={label} style={{ flex:1, background:'white', border:'1px solid hsl(220,15%,88%)', borderRadius:10, padding:'14px 18px' }}>
                 <div style={{ fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'hsl(220,10%,56%)', marginBottom:6 }}>{label}</div>
-                <div className="mono" style={{ fontSize:22, fontWeight:700, color }}>{fmt(val)}</div>
+                <div style={{ fontSize:22, fontWeight:700, color }}>{fmt(val)}</div>
               </div>
             ))}
           </div>
@@ -3490,10 +3490,10 @@ function LedgerPage() {
                         onMouseLeave={e=>e.currentTarget.style.background='white'}>
                         <td style={{ padding:'8px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}><span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:600 }}>{a.number}</span></td>
                         <td style={{ padding:'8px 14px', fontSize:13, borderBottom:'1px solid hsl(220,15%,92%)' }}>{a.name}</td>
-                        <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:12, borderBottom:'1px solid hsl(220,15%,92%)', color: debitBal > 0 ? 'hsl(220,25%,10%)' : 'hsl(220,15%,75%)' }}>
+                        <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'inherit', fontSize:12, borderBottom:'1px solid hsl(220,15%,92%)', color: debitBal > 0 ? 'hsl(220,25%,10%)' : 'hsl(220,15%,75%)' }}>
                           {debitBal > 0 ? fmt(debitBal) : '—'}
                         </td>
-                        <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:12, borderBottom:'1px solid hsl(220,15%,92%)', color: creditBal > 0 ? 'hsl(220,25%,10%)' : 'hsl(220,15%,75%)' }}>
+                        <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'inherit', fontSize:12, borderBottom:'1px solid hsl(220,15%,92%)', color: creditBal > 0 ? 'hsl(220,25%,10%)' : 'hsl(220,15%,75%)' }}>
                           {creditBal > 0 ? fmt(creditBal) : '—'}
                         </td>
                       </tr>
@@ -3503,8 +3503,8 @@ function LedgerPage() {
                 <tfoot>
                   <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
                     <td colSpan={2} style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
-                    <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(totalDebits)}</td>
-                    <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(totalCredits)}</td>
+                    <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13 }}>{fmt(totalDebits)}</td>
+                    <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13 }}>{fmt(totalCredits)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -3531,7 +3531,7 @@ function LedgerPage() {
           </div>
           {saleUnits && (
             <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px', fontSize:13 }}>
-              Auto-computed COGS: <strong className="mono">{fmt(computedCOGS())}</strong>
+              Auto-computed COGS: <strong>{fmt(computedCOGS())}</strong>
               <span style={{ color:'hsl(220,10%,56%)', marginLeft:6, fontSize:12 }}>(from BOM × units)</span>
             </div>
           )}
@@ -3667,7 +3667,7 @@ function ActivityLogPage() {
                   borderBottom: i < events.length-1 ? '1px solid hsl(220,15%,93%)' : 'none',
                 }}>
                   {/* Time */}
-                  <div className="mono" style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>
+                  <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>
                     {new Date(e.timestamp).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' })}
                   </div>
 
@@ -3675,7 +3675,7 @@ function ActivityLogPage() {
                   <div><Badge cls={typeCls[e.type]||'badge-muted'}>{typeLabel[e.type]||e.type}</Badge></div>
 
                   {/* Entity */}
-                  <div className="mono" style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)' }}>{e.entity}</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)' }}>{e.entity}</div>
 
                   {/* What changed */}
                   <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
@@ -3761,18 +3761,18 @@ function CreateWODialog({ open, onClose }) {
                   {l.partType === 'service' && <span style={{ fontSize:10, fontWeight:700, background:'hsl(38,80%,92%)', color:'hsl(38,70%,35%)', borderRadius:3, padding:'1px 5px' }}>SVC</span>}
                   {l.partName}
                 </span>
-                <span className="mono">{l.qty} × {fmt(l.unitCost)} = <strong>{fmt(l.qty * l.unitCost)}</strong></span>
+                <span>{l.qty} × {fmt(l.unitCost)} = <strong>{fmt(l.qty * l.unitCost)}</strong></span>
               </div>
             ))}
             <div style={{ borderTop:'2px solid hsl(220,15%,88%)', marginTop:8, paddingTop:8 }}>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}>
-                <span style={{ color:'hsl(220,10%,56%)' }}>Components</span><span className="mono">{fmt(componentCost)}</span>
+                <span style={{ color:'hsl(220,10%,56%)' }}>Components</span><span>{fmt(componentCost)}</span>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'hsl(38,70%,35%)' }}>
-                <span>Assembly (SVC) — posts on bill</span><span className="mono">{fmt(serviceCost)}</span>
+                <span>Assembly (SVC) — posts on bill</span><span>{fmt(serviceCost)}</span>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)', marginTop:4 }}>
-                <span>Total WO Cost</span><span className="mono">{fmt(totalCost)}</span>
+                <span>Total WO Cost</span><span>{fmt(totalCost)}</span>
               </div>
             </div>
           </div>
@@ -3866,7 +3866,7 @@ function WODetail({ wo, open, onClose }) {
           <div style={{ fontSize:13 }}><span style={{ color:'hsl(220,10%,56%)' }}>Qty: </span><strong>{wo.qtyOrdered}</strong></div>
           <div style={{ marginLeft:'auto', textAlign:'right' }}>
             <div style={{ fontSize:11, color:'hsl(220,10%,56%)', textTransform:'uppercase', letterSpacing:0.5 }}>Total WO Cost</div>
-            <div className="mono" style={{ fontSize:18, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(totalWIPCost)}</div>
+            <div style={{ fontSize:18, fontWeight:700, color:'hsl(220,70%,45%)' }}>{fmt(totalWIPCost)}</div>
             <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{fmt(unitCost)} / unit</div>
           </div>
         </div>
@@ -3910,7 +3910,7 @@ function WODetail({ wo, open, onClose }) {
                     <div style={{ fontSize:12, fontWeight:600 }}>{s.label}</div>
                     <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{s.entry}</div>
                   </div>
-                  <div className="mono" style={{ fontSize:12, fontWeight:600 }}>{s.amt}</div>
+                  <div style={{ fontSize:12, fontWeight:600 }}>{s.amt}</div>
                 </div>
               ))}
             </div>
@@ -3937,15 +3937,15 @@ function WODetail({ wo, open, onClose }) {
               <tfoot>
                 <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
                   <td colSpan={4} style={{ padding:'10px 14px', fontSize:13 }}>Physical Components</td>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(componentCost)}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13 }}>{fmt(componentCost)}</td>
                 </tr>
                 <tr style={{ background:'hsl(38,80%,97%)', fontWeight:700 }}>
                   <td colSpan={4} style={{ padding:'10px 14px', fontSize:13, color:'hsl(38,60%,35%)' }}>Assembly / Service (posts on bill)</td>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(38,60%,35%)' }}>{fmt(serviceCost)}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13, color:'hsl(38,60%,35%)' }}>{fmt(serviceCost)}</td>
                 </tr>
                 <tr style={{ background:'hsl(220,70%,92%)', fontWeight:700 }}>
                   <td colSpan={4} style={{ padding:'10px 14px', fontSize:13 }}>Total WO Cost ({wo.qtyOrdered} units @ {fmt(unitCost)}/unit)</td>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(totalWIPCost)}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13 }}>{fmt(totalWIPCost)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -3961,7 +3961,7 @@ function WODetail({ wo, open, onClose }) {
               {wo.bomLines.filter(l => l.partType === 'service').map((l,i) => (
                 <div key={i} style={{ display:'flex', justifyContent:'space-between', fontSize:13, padding:'4px 0' }}>
                   <span style={{ fontWeight:500 }}>{l.partName}</span>
-                  <span className="mono">{l.qty} × {fmt(l.unitCost)} = <strong>{fmt(l.qty * l.unitCost)}</strong></span>
+                  <span>{l.qty} × {fmt(l.unitCost)} = <strong>{fmt(l.qty * l.unitCost)}</strong></span>
                 </div>
               ))}
             </div>
@@ -4029,7 +4029,7 @@ function WODetail({ wo, open, onClose }) {
       <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
         <div style={{ fontSize:13, color:'hsl(220,10%,40%)' }}>
           This will post a journal entry moving <strong>{fmt(totalWIPCost)}</strong> from <strong>WIP</strong> into <strong>Inventory — Finished Goods</strong>.
-          <div style={{ marginTop:8 }}>Unit cost: <strong className="mono">{fmt(unitCost)}</strong> per unit × {wo.qtyOrdered} units</div>
+          <div style={{ marginTop:8 }}>Unit cost: <strong>{fmt(unitCost)}</strong> per unit × {wo.qtyOrdered} units</div>
         </div>
         <Field label="Completion Date"><Input type="date" value={dateCompleted} onChange={e=>setDateCompleted(e.target.value)} /></Field>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
@@ -4356,9 +4356,9 @@ function BillsPage() {
                 <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
                   <td colSpan={4} style={{ padding:'10px 14px', fontSize:13 }}>Totals</td>
                   <td/>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(bills.reduce((s,b)=>s+b.amount,0))}</td>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13 }}>{fmt(bills.reduce((s,b)=>s+(b.amountPaid||0),0))}</td>
-                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, color:'hsl(38,80%,35%)' }}>{fmt(totalOpen)}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13 }}>{fmt(bills.reduce((s,b)=>s+b.amount,0))}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13 }}>{fmt(bills.reduce((s,b)=>s+(b.amountPaid||0),0))}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13, color:'hsl(38,80%,35%)' }}>{fmt(totalOpen)}</td>
                   <td colSpan={3}/>
                 </tr>
               </tfoot>
@@ -4384,7 +4384,7 @@ function BillsPage() {
               </div>
               <div style={{ marginLeft:'auto', textAlign:'right' }}>
                 <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Balance Due</div>
-                <div className="mono" style={{ fontSize:20, fontWeight:700, color:'hsl(38,80%,35%)' }}>
+                <div style={{ fontSize:20, fontWeight:700, color:'hsl(38,80%,35%)' }}>
                   {fmt(((f.lineItems||[]).length > 0 ? lineItemsTotal : selected.amount) - (parseFloat(f.amountPaid)||0))}
                 </div>
               </div>
@@ -4423,13 +4423,13 @@ function BillsPage() {
                       </td>
                       <td style={{ padding:'4px 6px', textAlign:'right' }}>
                         <input type="number" min="0" value={line.qty} onChange={e => updateLineItem(idx, { qty: parseFloat(e.target.value)||0 })}
-                          style={{ width:64, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
+                          style={{ width:64, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'inherit', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
                       </td>
                       <td style={{ padding:'4px 6px', textAlign:'right' }}>
                         <input type="number" step="0.01" min="0" value={line.unitPrice} onChange={e => updateLineItem(idx, { unitPrice: parseFloat(e.target.value)||0 })}
-                          style={{ width:80, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
+                          style={{ width:80, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'inherit', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
                       </td>
-                      <td style={{ padding:'4px 10px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:12, fontWeight:600, whiteSpace:'nowrap' }}>
+                      <td style={{ padding:'4px 10px', textAlign:'right', fontFamily:'inherit', fontSize:12, fontWeight:600, whiteSpace:'nowrap' }}>
                         {fmt((parseFloat(line.qty)||0) * (parseFloat(line.unitPrice)||0))}
                       </td>
                       <td style={{ padding:'4px 6px', textAlign:'center' }}>
@@ -4442,7 +4442,7 @@ function BillsPage() {
                   <tfoot>
                     <tr>
                       <td colSpan={4} style={{ padding:'8px 10px', textAlign:'right', fontWeight:600, fontSize:13, borderTop:'2px solid hsl(220,15%,85%)' }}>Total</td>
-                      <td style={{ padding:'8px 10px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontWeight:700, fontSize:14, borderTop:'2px solid hsl(220,15%,85%)' }}>{fmt(lineItemsTotal)}</td>
+                      <td style={{ padding:'8px 10px', textAlign:'right', fontFamily:'inherit', fontWeight:700, fontSize:14, borderTop:'2px solid hsl(220,15%,85%)' }}>{fmt(lineItemsTotal)}</td>
                       <td style={{ borderTop:'2px solid hsl(220,15%,85%)' }}/>
                     </tr>
                   </tfoot>
@@ -4529,8 +4529,8 @@ function BillsPage() {
                 <span style={{ color:'hsl(220,10%,56%)' }}>Source PO: </span>
                 <span className="mono" style={{ color:'hsl(220,70%,45%)', fontWeight:700 }}>{po.poNumber}</span>
                 <span style={{ color:'hsl(220,10%,56%)', marginLeft:12 }}>Total: </span>
-                <span className="mono" style={{ fontWeight:600 }}>{fmt(po.totalCost)}</span>
-                {po.depositAmount > 0 && <><span style={{ color:'hsl(220,10%,56%)', marginLeft:12 }}>Deposit paid: </span><span className="mono">{fmt(po.depositAmount)}</span></>}
+                <span style={{ fontWeight:600 }}>{fmt(po.totalCost)}</span>
+                {po.depositAmount > 0 && <><span style={{ color:'hsl(220,10%,56%)', marginLeft:12 }}>Deposit paid: </span><span>{fmt(po.depositAmount)}</span></>}
               </div>
             )}
 
@@ -4602,7 +4602,7 @@ function BillsPage() {
                           </td>
                           <td style={{ padding:'10px 12px', fontSize:12, color:'hsl(220,10%,56%)' }}>{po.dateOrdered}</td>
                           <td style={{ padding:'10px 12px', fontSize:13 }}>{sup?.name || '—'}</td>
-                          <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:13, fontWeight:600 }}>{fmt(po.totalCost)}</td>
+                          <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'inherit', fontSize:13, fontWeight:600 }}>{fmt(po.totalCost)}</td>
                         </tr>
                       );
                     })}
@@ -4675,13 +4675,13 @@ function BillsPage() {
                         </td>
                         <td style={{ padding:'4px 6px', textAlign:'right' }}>
                           <input type="number" min="0" value={line.qty} onChange={e => updateNewLineItem(idx, { qty: parseFloat(e.target.value)||0 })}
-                            style={{ width:64, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
+                            style={{ width:64, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'inherit', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
                         </td>
                         <td style={{ padding:'4px 6px', textAlign:'right' }}>
                           <input type="number" step="0.01" min="0" value={line.unitPrice} onChange={e => updateNewLineItem(idx, { unitPrice: parseFloat(e.target.value)||0 })}
-                            style={{ width:80, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'JetBrains Mono,monospace', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
+                            style={{ width:80, padding:'5px 6px', fontSize:12, textAlign:'right', fontFamily:'inherit', border:'1px solid hsl(220,15%,85%)', borderRadius:5, background:'white' }} />
                         </td>
-                        <td style={{ padding:'4px 10px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontSize:12, fontWeight:600, whiteSpace:'nowrap' }}>
+                        <td style={{ padding:'4px 10px', textAlign:'right', fontFamily:'inherit', fontSize:12, fontWeight:600, whiteSpace:'nowrap' }}>
                           {fmt((parseFloat(line.qty)||0) * (parseFloat(line.unitPrice)||0))}
                         </td>
                         <td style={{ padding:'4px 6px', textAlign:'center' }}>
@@ -4694,7 +4694,7 @@ function BillsPage() {
                     <tfoot>
                       <tr>
                         <td colSpan={4} style={{ padding:'8px 10px', textAlign:'right', fontWeight:600, fontSize:13, borderTop:'2px solid hsl(220,15%,85%)' }}>Total</td>
-                        <td style={{ padding:'8px 10px', textAlign:'right', fontFamily:'JetBrains Mono,monospace', fontWeight:700, fontSize:14, borderTop:'2px solid hsl(220,15%,85%)' }}>{fmt(newLineItemsTotal)}</td>
+                        <td style={{ padding:'8px 10px', textAlign:'right', fontFamily:'inherit', fontWeight:700, fontSize:14, borderTop:'2px solid hsl(220,15%,85%)' }}>{fmt(newLineItemsTotal)}</td>
                         <td style={{ borderTop:'2px solid hsl(220,15%,85%)' }}/>
                       </tr>
                     </tfoot>
@@ -4803,13 +4803,13 @@ function CreateWOFromBillDialog({ bill, onClose }) {
                   {l.partType === 'service' && <span style={{ fontSize:10, fontWeight:700, background:'hsl(38,80%,92%)', color:'hsl(38,70%,35%)', borderRadius:3, padding:'1px 5px' }}>SVC</span>}
                   {l.partName}
                 </span>
-                <span className="mono">{l.qty} × {fmt(l.unitCost)} = <strong>{fmt(l.qty * l.unitCost)}</strong></span>
+                <span>{l.qty} × {fmt(l.unitCost)} = <strong>{fmt(l.qty * l.unitCost)}</strong></span>
               </div>
             ))}
             <div style={{ borderTop:'2px solid hsl(220,15%,88%)', marginTop:8, paddingTop:8 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}><span style={{ color:'hsl(220,10%,56%)' }}>Components</span><span className="mono">{fmt(componentCost)}</span></div>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'hsl(38,70%,35%)' }}><span>Assembly (SVC)</span><span className="mono">{fmt(serviceCost)}</span></div>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)', marginTop:4 }}><span>Total WO Cost</span><span className="mono">{fmt(componentCost + serviceCost)}</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}><span style={{ color:'hsl(220,10%,56%)' }}>Components</span><span>{fmt(componentCost)}</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'hsl(38,70%,35%)' }}><span>Assembly (SVC)</span><span>{fmt(serviceCost)}</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)', marginTop:4 }}><span>Total WO Cost</span><span>{fmt(componentCost + serviceCost)}</span></div>
             </div>
           </div>
         )}

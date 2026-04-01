@@ -13,6 +13,8 @@ const initialSuppliers = [
   { id: 'sup-dowel',   name: 'Dowel Pin Supplier',         shortName: 'Dowel Pin',   address: '654 Pin Lane',    city: 'Taichung',  country: 'Taiwan', email: 'sales@dowelpin.tw',        phone: '+886-4-6789',  preferredPaymentMethod: 'Wire Transfer', paymentTerms: 'Net-60' },
   { id: 'sup-pkg',     name: 'Packaging Supplier',         shortName: 'Packaging',   address: '987 Box Way',     city: 'Shenzhen',  country: 'China',  email: 'packaging@pkgsupplier.cn', phone: '+86-755-3456', preferredPaymentMethod: 'Wire Transfer', paymentTerms: 'Net-30' },
   { id: 'sup-factory', name: 'Assembly Factory',           shortName: 'Factory',     address: '99 Production Rd',city: 'Dongguan',  country: 'China',  email: 'production@factory.cn',    phone: '+86-769-0001', preferredPaymentMethod: 'Wire Transfer', paymentTerms: '30% deposit, balance Net-30' },
+  { id: 'sup-blades',  name: 'Feather Blade Co',          shortName: 'Feather Blade',address: '12 Cutlery Rd',   city: 'Taichung', country: 'Taiwan', email: 'orders@featherblade.tw',   phone: '+886-4-8801',  preferredPaymentMethod: 'Wire Transfer', paymentTerms: 'Net-30' },
+  { id: 'sup-proacc',  name: 'ProFinish Accessories',     shortName: 'ProFinish',    address: '88 Industrial Ave',city: 'Shenzhen', country: 'China',  email: 'sales@profinish.cn',       phone: '+86-755-7700', preferredPaymentMethod: 'Wire Transfer', paymentTerms: 'Net-30' },
 ];
 
 const initialParts = [
@@ -27,14 +29,20 @@ const initialParts = [
   { id: 'svc-assm-eb', name: 'Assembly — Element Razor Black', sku: 'ASSM-ELEMENT-B', unitCost: 7.00, freightCost: 0.00, supplierId: null, type: 'service', notes: 'Factory assembly fee per unit' },
 ];
 
-const initialFinishedGoods = [{
-  id: 'fg-element-b', sku: 'ELEMENT-B_10BLD', name: 'OneBlade Element Razor, Black',
-  assemblyCost: 7.00, retailPrice: 49.00,
-  bom: [
-    { partId: 'part1', qty: 1 }, { partId: 'part3', qty: 1 }, { partId: 'part4', qty: 1 },
-    { partId: 'part5', qty: 1 }, { partId: 'pkg1',  qty: 1 }, { partId: 'pkg2',  qty: 1 }, { partId: 'pkg3', qty: 1 }, { partId: 'svc-assm-eb', qty: 1 },
-  ],
-}];
+const initialFinishedGoods = [
+  {
+    id: 'fg-element-b', sku: 'ELEMENT-B_10BLD', name: 'OneBlade Element Razor, Black',
+    assemblyCost: 7.00, retailPrice: 49.00,
+    bom: [
+      { partId: 'part1', qty: 1 }, { partId: 'part3', qty: 1 }, { partId: 'part4', qty: 1 },
+      { partId: 'part5', qty: 1 }, { partId: 'pkg1',  qty: 1 }, { partId: 'pkg2',  qty: 1 }, { partId: 'pkg3', qty: 1 }, { partId: 'svc-assm-eb', qty: 1 },
+    ],
+  },
+  // Finished goods purchased outright (no BOM — cost tracked via bills)
+  { id: 'fg-blades', sku: 'BLADES-10PK',  name: 'Blade Refill Pack (10-count)', assemblyCost: 0, retailPrice: 12.99, bom: [], purchasedDirect: true, supplierId: 'sup-blades' },
+  { id: 'fg-stand',  sku: 'STAND-SS',     name: 'Stainless Razor Stand',        assemblyCost: 0, retailPrice: 24.99, bom: [], purchasedDirect: true, supplierId: 'sup-proacc' },
+  { id: 'fg-pouch',  sku: 'TRVL-POUCH',   name: 'OneBlade Travel Pouch',        assemblyCost: 0, retailPrice: 18.99, bom: [], purchasedDirect: true, supplierId: 'sup-proacc' },
+];
 
 const initialInventory = [
   { id: 'inv-1', partId: 'part1', location: 'Assembly Factory', qty: 1000, paidFor: true, dateReceived: '2026-03-01' },
@@ -48,31 +56,231 @@ const initialInventory = [
 ];
 
 const initialPOs = [
-  { id:'po-1', poNumber:'PO-2026-001', supplierId:'sup-zinc',    orderStatus:'submitted', dateOrdered:'2026-03-10', items:[{partId:'part1', qty:500,  unitCost:2.00}],                                          totalCost:1000  },
-  { id:'po-2', poNumber:'PO-2026-002', supplierId:'sup-factory', orderStatus:'submitted', dateOrdered:'2026-03-10', items:[{fgId:'fg-element-b', fgSku:'ELEMENT-B_10BLD', qty:1000, unitCost:13.92}], totalCost:13920 },
+  // ── Batch 1: Aug–Sep 2025 ──────────────────────────────────────────────────
+  { id:'po-h1',  poNumber:'PO-2025-001', supplierId:'sup-zinc',    orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-08-15', items:[{partId:'part1', qty:1500, unitCost:2.00}],                                                                                         totalCost:3000 },
+  { id:'po-h2',  poNumber:'PO-2025-002', supplierId:'sup-alum',    orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-08-15', items:[{partId:'part2', qty:1500, unitCost:3.00}],                                                                                         totalCost:4500 },
+  { id:'po-h3',  poNumber:'PO-2025-003', supplierId:'sup-anod',    orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-08-15', items:[{partId:'part3', qty:1500, unitCost:1.00}],                                                                                         totalCost:1500 },
+  { id:'po-h4',  poNumber:'PO-2025-004', supplierId:'sup-spring',  orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-08-15', items:[{partId:'part4', qty:1500, unitCost:0.05}],                                                                                         totalCost:75   },
+  { id:'po-h5',  poNumber:'PO-2025-005', supplierId:'sup-dowel',   orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-08-15', items:[{partId:'part5', qty:1500, unitCost:0.02}],                                                                                         totalCost:30   },
+  { id:'po-h6',  poNumber:'PO-2025-006', supplierId:'sup-pkg',     orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-08-15', items:[{partId:'pkg1', qty:1500, unitCost:0.50},{partId:'pkg2', qty:1500, unitCost:0.20},{partId:'pkg3', qty:1500, unitCost:0.15}],         totalCost:1275 },
+  { id:'po-h7',  poNumber:'PO-2025-007', supplierId:'sup-factory', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-09-01', items:[{fgId:'fg-element-b', fgSku:'ELEMENT-B_10BLD', qty:500,  unitCost:13.92}],                                                          totalCost:6960 },
+  // ── Batch 2: Nov 2025 ──────────────────────────────────────────────────────
+  { id:'po-h8',  poNumber:'PO-2025-008', supplierId:'sup-zinc',    orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-11-01', items:[{partId:'part1', qty:1000, unitCost:2.00}],                                                                                         totalCost:2000 },
+  { id:'po-h9',  poNumber:'PO-2025-009', supplierId:'sup-alum',    orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-11-01', items:[{partId:'part2', qty:1000, unitCost:3.00}],                                                                                         totalCost:3000 },
+  { id:'po-h10', poNumber:'PO-2025-010', supplierId:'sup-anod',    orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-11-01', items:[{partId:'part3', qty:1000, unitCost:1.00}],                                                                                         totalCost:1000 },
+  { id:'po-h11', poNumber:'PO-2025-011', supplierId:'sup-spring',  orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-11-01', items:[{partId:'part4', qty:1000, unitCost:0.05}],                                                                                         totalCost:50   },
+  { id:'po-h12', poNumber:'PO-2025-012', supplierId:'sup-dowel',   orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-11-01', items:[{partId:'part5', qty:1000, unitCost:0.02}],                                                                                         totalCost:20   },
+  { id:'po-h13', poNumber:'PO-2025-013', supplierId:'sup-pkg',     orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-11-01', items:[{partId:'pkg1', qty:1000, unitCost:0.50},{partId:'pkg2', qty:1000, unitCost:0.20},{partId:'pkg3', qty:1000, unitCost:0.15}],         totalCost:850  },
+  { id:'po-h14', poNumber:'PO-2025-014', supplierId:'sup-factory', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-11-15', items:[{fgId:'fg-element-b', fgSku:'ELEMENT-B_10BLD', qty:500,  unitCost:13.92}],                                                          totalCost:6960 },
+  // ── Blade Refill Pack (BLADES-10PK) — 3 batches with price increases ────────
+  { id:'po-bl1', poNumber:'PO-2025-BL1', supplierId:'sup-blades', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-09-05', items:[{fgId:'fg-blades', fgSku:'BLADES-10PK',  qty:500, unitCost:3.50}], totalCost:1750  },
+  { id:'po-bl2', poNumber:'PO-2025-BL2', supplierId:'sup-blades', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-12-01', items:[{fgId:'fg-blades', fgSku:'BLADES-10PK',  qty:600, unitCost:3.65}], totalCost:2190  },
+  { id:'po-bl3', poNumber:'PO-2026-BL1', supplierId:'sup-blades', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2026-02-05', items:[{fgId:'fg-blades', fgSku:'BLADES-10PK',  qty:800, unitCost:3.80}], totalCost:3040  },
+  // ── Stainless Razor Stand (STAND-SS) — 3 batches with price increases ────────
+  { id:'po-ss1', poNumber:'PO-2025-SS1', supplierId:'sup-proacc', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-09-10', items:[{fgId:'fg-stand',  fgSku:'STAND-SS',     qty:200, unitCost:5.50}], totalCost:1100  },
+  { id:'po-ss2', poNumber:'PO-2025-SS2', supplierId:'sup-proacc', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-12-10', items:[{fgId:'fg-stand',  fgSku:'STAND-SS',     qty:250, unitCost:5.90}], totalCost:1475  },
+  { id:'po-ss3', poNumber:'PO-2026-SS1', supplierId:'sup-proacc', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2026-03-01', items:[{fgId:'fg-stand',  fgSku:'STAND-SS',     qty:300, unitCost:6.25}], totalCost:1875  },
+  // ── OneBlade Travel Pouch (TRVL-POUCH) — 3 batches with price increases ──────
+  { id:'po-tp1', poNumber:'PO-2025-TP1', supplierId:'sup-proacc', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2025-10-05', items:[{fgId:'fg-pouch',  fgSku:'TRVL-POUCH',   qty:300, unitCost:2.80}], totalCost:840   },
+  { id:'po-tp2', poNumber:'PO-2026-TP1', supplierId:'sup-proacc', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2026-01-10', items:[{fgId:'fg-pouch',  fgSku:'TRVL-POUCH',   qty:350, unitCost:3.00}], totalCost:1050  },
+  { id:'po-tp3', poNumber:'PO-2026-TP2', supplierId:'sup-proacc', orderStatus:'billed', paymentStatus:'paid', dateOrdered:'2026-03-05', items:[{fgId:'fg-pouch',  fgSku:'TRVL-POUCH',   qty:400, unitCost:3.20}], totalCost:1280  },
+  // ── Current: Q1 2026 ───────────────────────────────────────────────────────
+  { id:'po-1', poNumber:'PO-2026-001', supplierId:'sup-zinc',    orderStatus:'submitted', dateOrdered:'2026-03-10', items:[{partId:'part1', qty:500,  unitCost:2.00}],                                            totalCost:1000  },
+  { id:'po-2', poNumber:'PO-2026-002', supplierId:'sup-factory', orderStatus:'billed',    dateOrdered:'2026-03-10', items:[{fgId:'fg-element-b', fgSku:'ELEMENT-B_10BLD', qty:1000, unitCost:13.92}],             totalCost:13920 },
 ];
 
-// ── Chart of Accounts ──────────────────────────────────────────────────────────
+// BOM lines helper for 500-unit production runs of ELEMENT-B_10BLD (unitCost = part.unitCost + part.freightCost; service = unitCost only)
+const _bomLines500 = [
+  { partId:'part1',       partName:'Zinc Razor Head',                     partType:'component', qty:500, unitCost:2.15 },
+  { partId:'part3',       partName:'Anodized Logo-Etched Handle (Black)', partType:'component', qty:500, unitCost:1.10 },
+  { partId:'part4',       partName:'Spring',                              partType:'component', qty:500, unitCost:0.06 },
+  { partId:'part5',       partName:'Dowel Pin',                           partType:'component', qty:500, unitCost:0.03 },
+  { partId:'pkg1',        partName:'Blank White Box',                     partType:'packaging', qty:500, unitCost:0.55 },
+  { partId:'pkg2',        partName:'Printed Box Sleeve (Black)',           partType:'packaging', qty:500, unitCost:0.23 },
+  { partId:'pkg3',        partName:'Inserts',                             partType:'packaging', qty:500, unitCost:0.17 },
+  { partId:'svc-assm-eb', partName:'Assembly — Element Razor Black',      partType:'service',   qty:500, unitCost:7.00 },
+];
+
+const initialWorkOrders = [
+  // WO-2025-001: Batch 1 — 500 units, completed Oct 2025
+  { id:'wo-h1', woNumber:'WO-2025-001', sku:'ELEMENT-B_10BLD', fgName:'OneBlade Element Razor, Black',
+    qtyOrdered:500, status:'completed',
+    dateOrdered:'2025-09-10', dateReleased:'2025-09-15', dateAssemblyInvoice:'2025-10-01', dateCompleted:'2025-10-20',
+    memo:'Batch 1 — initial production run', bomLines:_bomLines500 },
+  // WO-2025-002: Batch 2 — 500 units, completed Jan 2026
+  { id:'wo-h2', woNumber:'WO-2025-002', sku:'ELEMENT-B_10BLD', fgName:'OneBlade Element Razor, Black',
+    qtyOrdered:500, status:'completed',
+    dateOrdered:'2025-11-20', dateReleased:'2025-11-25', dateAssemblyInvoice:'2025-12-20', dateCompleted:'2026-01-10',
+    memo:'Batch 2 — holiday restock', bomLines:_bomLines500 },
+  // WO-2026-001: Batch 3 — 500 units, released (in progress)
+  { id:'wo-h3', woNumber:'WO-2026-001', sku:'ELEMENT-B_10BLD', fgName:'OneBlade Element Razor, Black',
+    qtyOrdered:500, status:'released',
+    dateOrdered:'2026-03-05', dateReleased:'2026-03-10',
+    memo:'Batch 3 — Q1 2026 replenishment', bomLines:_bomLines500 },
+];
+
+const initialBills = [
+  // ── Batch 1 component bills (received at Assembly Factory) ─────────────────
+  { id:'bill-h1',  poId:'po-h1',  poNumber:'PO-2025-001', supplierId:'sup-zinc',    amount:3000, amountPaid:3000, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2025-09-14', dateCreated:'2025-08-25', memo:'Bill from PO-2025-001 — Zinc Razor Heads',
+    lineItems:[{ description:'Zinc Razor Head',                     sku:'ZINC-HEAD-01',   qty:1500, unitPrice:2.00 }] },
+  { id:'bill-h2',  poId:'po-h2',  poNumber:'PO-2025-002', supplierId:'sup-alum',    amount:4500, amountPaid:4500, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2025-09-14', dateCreated:'2025-08-25', memo:'Bill from PO-2025-002 — Aluminum Handles (raw)',
+    lineItems:[{ description:'Forged CNC Aluminum Handle (raw)',    sku:'ALUM-HDL-RAW',   qty:1500, unitPrice:3.00 }] },
+  { id:'bill-h3',  poId:'po-h3',  poNumber:'PO-2025-003', supplierId:'sup-anod',    amount:1500, amountPaid:1500, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2025-09-14', dateCreated:'2025-08-28', memo:'Bill from PO-2025-003 — Anodized Handles',
+    lineItems:[{ description:'Anodized Logo-Etched Handle (Black)', sku:'ALUM-HDL-BLK',   qty:1500, unitPrice:1.00 }] },
+  { id:'bill-h4',  poId:'po-h4',  poNumber:'PO-2025-004', supplierId:'sup-spring',  amount:75,   amountPaid:75,   paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2025-10-14', dateCreated:'2025-08-20', memo:'Bill from PO-2025-004 — Springs',
+    lineItems:[{ description:'Spring',                              sku:'SPRING-01',       qty:1500, unitPrice:0.05 }] },
+  { id:'bill-h5',  poId:'po-h5',  poNumber:'PO-2025-005', supplierId:'sup-dowel',   amount:30,   amountPaid:30,   paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2025-10-14', dateCreated:'2025-08-20', memo:'Bill from PO-2025-005 — Dowel Pins',
+    lineItems:[{ description:'Dowel Pin',                           sku:'DOWEL-01',        qty:1500, unitPrice:0.02 }] },
+  { id:'bill-h6',  poId:'po-h6',  poNumber:'PO-2025-006', supplierId:'sup-pkg',     amount:1275, amountPaid:1275, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2025-09-14', dateCreated:'2025-08-22', memo:'Bill from PO-2025-006 — Packaging',
+    lineItems:[{ description:'Blank White Box', sku:'PKG-BOX-WHT', qty:1500, unitPrice:0.50 },{ description:'Printed Box Sleeve (Black)', sku:'PKG-SLV-BLK', qty:1500, unitPrice:0.20 },{ description:'Inserts', sku:'PKG-INS-01', qty:1500, unitPrice:0.15 }] },
+  // Batch 1 FG bill — shipped direct to Amazon FBA
+  { id:'bill-h7',  poId:'po-h7',  poNumber:'PO-2025-007', supplierId:'sup-factory', amount:6960, amountPaid:6960, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Amazon FBA',       shipTo:'Amazon FBA',       dueDate:'2025-10-01', dateCreated:'2025-09-05', memo:'Bill from PO-2025-007 — Element Razor Black (Batch 1, 500 units)',
+    lineItems:[{ description:'OneBlade Element Razor, Black',       sku:'ELEMENT-B_10BLD', qty:500,  unitPrice:13.92 }] },
+  // ── Batch 2 component bills ────────────────────────────────────────────────
+  { id:'bill-h8',  poId:'po-h8',  poNumber:'PO-2025-008', supplierId:'sup-zinc',    amount:2150, amountPaid:2150, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2025-12-01', dateCreated:'2025-11-05', memo:'Bill from PO-2025-008 — Zinc Razor Heads (price adjustment)',
+    lineItems:[{ description:'Zinc Razor Head',                     sku:'ZINC-HEAD-01',   qty:1000, unitPrice:2.15 }] },
+  { id:'bill-h9',  poId:'po-h9',  poNumber:'PO-2025-009', supplierId:'sup-alum',    amount:3000, amountPaid:3000, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2025-12-01', dateCreated:'2025-11-05', memo:'Bill from PO-2025-009 — Aluminum Handles (raw)',
+    lineItems:[{ description:'Forged CNC Aluminum Handle (raw)',    sku:'ALUM-HDL-RAW',   qty:1000, unitPrice:3.00 }] },
+  { id:'bill-h10', poId:'po-h10', poNumber:'PO-2025-010', supplierId:'sup-anod',    amount:1000, amountPaid:1000, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2025-12-01', dateCreated:'2025-11-08', memo:'Bill from PO-2025-010 — Anodized Handles',
+    lineItems:[{ description:'Anodized Logo-Etched Handle (Black)', sku:'ALUM-HDL-BLK',   qty:1000, unitPrice:1.00 }] },
+  { id:'bill-h11', poId:'po-h11', poNumber:'PO-2025-011', supplierId:'sup-spring',  amount:50,   amountPaid:50,   paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2026-01-01', dateCreated:'2025-11-03', memo:'Bill from PO-2025-011 — Springs',
+    lineItems:[{ description:'Spring',                              sku:'SPRING-01',       qty:1000, unitPrice:0.05 }] },
+  { id:'bill-h12', poId:'po-h12', poNumber:'PO-2025-012', supplierId:'sup-dowel',   amount:20,   amountPaid:20,   paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2026-01-01', dateCreated:'2025-11-03', memo:'Bill from PO-2025-012 — Dowel Pins',
+    lineItems:[{ description:'Dowel Pin',                           sku:'DOWEL-01',        qty:1000, unitPrice:0.02 }] },
+  { id:'bill-h13', poId:'po-h13', poNumber:'PO-2025-013', supplierId:'sup-pkg',     amount:900,  amountPaid:900,  paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Assembly Factory', shipTo:'Assembly Factory', dueDate:'2025-12-01', dateCreated:'2025-11-05', memo:'Bill from PO-2025-013 — Packaging (Batch 2, price adj.)',
+    lineItems:[{ description:'Blank White Box', sku:'PKG-BOX-WHT', qty:1000, unitPrice:0.53 },{ description:'Printed Box Sleeve (Black)', sku:'PKG-SLV-BLK', qty:1000, unitPrice:0.21 },{ description:'Inserts', sku:'PKG-INS-01', qty:1000, unitPrice:0.16 }] },
+  // Batch 2 FG bill — shipped direct to GrowthSpoke 3PL
+  { id:'bill-h14', poId:'po-h14', poNumber:'PO-2025-014', supplierId:'sup-factory', amount:6960, amountPaid:6960, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'GrowthSpoke 3PL',  shipTo:'GrowthSpoke 3PL',  dueDate:'2025-12-15', dateCreated:'2025-11-18', memo:'Bill from PO-2025-014 — Element Razor Black (Batch 2, 500 units)',
+    lineItems:[{ description:'OneBlade Element Razor, Black',       sku:'ELEMENT-B_10BLD', qty:500,  unitPrice:13.92 }] },
+  // ── Current: PO-2026-002 — 1,000 units in transit to Amazon FBA ───────────
+  { id:'bill-c1', poId:'po-2', poNumber:'PO-2026-002', supplierId:'sup-factory', amount:13920, amountPaid:6960, paymentStatus:'deposit-paid', status:'open', shipmentStatus:'shipped', shipTo:'Amazon FBA',
+    dueDate:'2026-04-09', dateCreated:'2026-03-12', memo:'Bill from PO-2026-002 — Element Razor Black (1,000 units)',
+    lineItems:[{ description:'OneBlade Element Razor, Black',       sku:'ELEMENT-B_10BLD', qty:1000, unitPrice:13.92 }] },
+  // ── Blade Refill Pack — 3 batches ─────────────────────────────────────────
+  { id:'bill-bl1', poId:'po-bl1', poNumber:'PO-2025-BL1', supplierId:'sup-blades', amount:1750, amountPaid:1750, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Amazon FBA',      shipTo:'Amazon FBA',      dueDate:'2025-10-05', dateCreated:'2025-09-10', memo:'Bill from PO-2025-BL1 — Blade Refill Pack 10pk (Batch 1)',
+    lineItems:[{ description:'Blade Refill Pack (10-count)', sku:'BLADES-10PK', qty:500, unitPrice:3.50 }] },
+  { id:'bill-bl2', poId:'po-bl2', poNumber:'PO-2025-BL2', supplierId:'sup-blades', amount:2190, amountPaid:2190, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'GrowthSpoke 3PL', shipTo:'GrowthSpoke 3PL', dueDate:'2026-01-01', dateCreated:'2025-12-05', memo:'Bill from PO-2025-BL2 — Blade Refill Pack 10pk (Batch 2, +4.3%)',
+    lineItems:[{ description:'Blade Refill Pack (10-count)', sku:'BLADES-10PK', qty:600, unitPrice:3.65 }] },
+  { id:'bill-bl3', poId:'po-bl3', poNumber:'PO-2026-BL1', supplierId:'sup-blades', amount:3040, amountPaid:3040, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Amazon FBA',      shipTo:'Amazon FBA',      dueDate:'2026-03-07', dateCreated:'2026-02-10', memo:'Bill from PO-2026-BL1 — Blade Refill Pack 10pk (Batch 3, +4.1%)',
+    lineItems:[{ description:'Blade Refill Pack (10-count)', sku:'BLADES-10PK', qty:800, unitPrice:3.80 }] },
+  // ── Stainless Razor Stand — 3 batches ─────────────────────────────────────
+  { id:'bill-ss1', poId:'po-ss1', poNumber:'PO-2025-SS1', supplierId:'sup-proacc', amount:1100, amountPaid:1100, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Amazon FBA',      shipTo:'Amazon FBA',      dueDate:'2025-10-10', dateCreated:'2025-09-15', memo:'Bill from PO-2025-SS1 — Stainless Razor Stand (Batch 1)',
+    lineItems:[{ description:'Stainless Razor Stand', sku:'STAND-SS', qty:200, unitPrice:5.50 }] },
+  { id:'bill-ss2', poId:'po-ss2', poNumber:'PO-2025-SS2', supplierId:'sup-proacc', amount:1475, amountPaid:1475, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'GrowthSpoke 3PL', shipTo:'GrowthSpoke 3PL', dueDate:'2026-01-10', dateCreated:'2025-12-15', memo:'Bill from PO-2025-SS2 — Stainless Razor Stand (Batch 2, +7.3%)',
+    lineItems:[{ description:'Stainless Razor Stand', sku:'STAND-SS', qty:250, unitPrice:5.90 }] },
+  { id:'bill-ss3', poId:'po-ss3', poNumber:'PO-2026-SS1', supplierId:'sup-proacc', amount:1875, amountPaid:1875, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Amazon FBA',      shipTo:'Amazon FBA',      dueDate:'2026-04-01', dateCreated:'2026-03-05', memo:'Bill from PO-2026-SS1 — Stainless Razor Stand (Batch 3, +5.9%)',
+    lineItems:[{ description:'Stainless Razor Stand', sku:'STAND-SS', qty:300, unitPrice:6.25 }] },
+  // ── OneBlade Travel Pouch — 3 batches ─────────────────────────────────────
+  { id:'bill-tp1', poId:'po-tp1', poNumber:'PO-2025-TP1', supplierId:'sup-proacc', amount:840,  amountPaid:840,  paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Amazon FBA',      shipTo:'Amazon FBA',      dueDate:'2025-11-05', dateCreated:'2025-10-10', memo:'Bill from PO-2025-TP1 — OneBlade Travel Pouch (Batch 1)',
+    lineItems:[{ description:'OneBlade Travel Pouch', sku:'TRVL-POUCH', qty:300, unitPrice:2.80 }] },
+  { id:'bill-tp2', poId:'po-tp2', poNumber:'PO-2026-TP1', supplierId:'sup-proacc', amount:1050, amountPaid:1050, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'GrowthSpoke 3PL', shipTo:'GrowthSpoke 3PL', dueDate:'2026-02-10', dateCreated:'2026-01-15', memo:'Bill from PO-2026-TP1 — OneBlade Travel Pouch (Batch 2, +7.1%)',
+    lineItems:[{ description:'OneBlade Travel Pouch', sku:'TRVL-POUCH', qty:350, unitPrice:3.00 }] },
+  { id:'bill-tp3', poId:'po-tp3', poNumber:'PO-2026-TP2', supplierId:'sup-proacc', amount:1280, amountPaid:1280, paymentStatus:'paid', status:'paid', shipmentStatus:'received', receivedLocation:'Amazon FBA',      shipTo:'Amazon FBA',      dueDate:'2026-04-05', dateCreated:'2026-03-10', memo:'Bill from PO-2026-TP2 — OneBlade Travel Pouch (Batch 3, +6.7%)',
+    lineItems:[{ description:'OneBlade Travel Pouch', sku:'TRVL-POUCH', qty:400, unitPrice:3.20 }] },
+];
+
+// ── Chart of Accounts (cost-side only — no revenue, no equity) ─────────────────
 const initialAccounts = [
-  { id:'acct-1010', number:'1010', name:'Cash / Bank',                  type:'asset',     normal:'debit'  },
-  { id:'acct-1200', number:'1200', name:'Accounts Receivable',          type:'asset',     normal:'debit'  },
-  { id:'acct-1300', number:'1300', name:'Inventory — Components',       type:'asset',     normal:'debit'  },
-  { id:'acct-1310', number:'1310', name:'Inventory — Finished Goods',   type:'asset',     normal:'debit'  },
-  { id:'acct-1320', number:'1320', name:'Inventory — In Transit',       type:'asset',     normal:'debit'  },
-  { id:'acct-1330', number:'1330', name:'Work In Process (WIP)',           type:'asset',     normal:'debit'  },
-  { id:'acct-1400', number:'1400', name:'Prepaid / Deposits Paid',      type:'asset',     normal:'debit'  },
-  { id:'acct-2100', number:'2100', name:'Accounts Payable',             type:'liability', normal:'credit' },
-  { id:'acct-3000', number:'3000', name:'Retained Earnings',            type:'equity',    normal:'credit' },
-  { id:'acct-4000', number:'4000', name:'Sales Revenue',                type:'revenue',   normal:'credit' },
-  { id:'acct-5000', number:'5000', name:'COGS — Components Consumed',   type:'cogs',      normal:'debit'  },
-  { id:'acct-5010', number:'5010', name:'COGS — Finished Goods Sold',   type:'cogs',      normal:'debit'  },
+  { id:'acct-1010', number:'1010', name:'Inventory — Components',     type:'asset',     normal:'debit'  },
+  { id:'acct-1020', number:'1020', name:'Inventory — Finished Goods', type:'asset',     normal:'debit'  },
+  { id:'acct-1030', number:'1030', name:'Inventory — In Transit',     type:'asset',     normal:'debit'  },
+  { id:'acct-1040', number:'1040', name:'Work In Process (WIP)',      type:'asset',     normal:'debit'  },
+  { id:'acct-1050', number:'1050', name:'Prepaid / Deposits Paid',    type:'asset',     normal:'debit'  },
+  { id:'acct-2010', number:'2010', name:'Accounts Payable',           type:'liability', normal:'credit' },
+  { id:'acct-5010', number:'5010', name:'Cash Outflow',               type:'expense',   normal:'credit' },
 ];
 
-const initialJournal = [];
+const initialJournal = [
+  // ── Component bill payments (Batch 1 — paid) ──────────────────────────────
+  { id:'je-b1', date:'2025-08-25', postedAt:'2025-08-25T00:00:00.000Z', memo:'PO-2025-001 — Zinc Heads paid (Zinc Supplier)', source:'bill', sourceId:'bill-h1',
+    lines:[{ accountId:'acct-1010', debit:3000, credit:0 }, { accountId:'acct-5010', debit:0, credit:3000 }] },
+  { id:'je-b2', date:'2025-08-25', postedAt:'2025-08-25T00:00:00.000Z', memo:'PO-2025-002 — Aluminum Handles paid (Aluminum Supplier)', source:'bill', sourceId:'bill-h2',
+    lines:[{ accountId:'acct-1010', debit:4500, credit:0 }, { accountId:'acct-5010', debit:0, credit:4500 }] },
+  { id:'je-b3', date:'2025-08-28', postedAt:'2025-08-28T00:00:00.000Z', memo:'PO-2025-003 — Anodized Handles paid (Anodizing Service)', source:'bill', sourceId:'bill-h3',
+    lines:[{ accountId:'acct-1010', debit:1500, credit:0 }, { accountId:'acct-5010', debit:0, credit:1500 }] },
+  { id:'je-b4', date:'2025-08-20', postedAt:'2025-08-20T00:00:00.000Z', memo:'PO-2025-004 — Springs paid (Spring Supplier)', source:'bill', sourceId:'bill-h4',
+    lines:[{ accountId:'acct-1010', debit:75, credit:0 }, { accountId:'acct-5010', debit:0, credit:75 }] },
+  { id:'je-b5', date:'2025-08-20', postedAt:'2025-08-20T00:00:00.000Z', memo:'PO-2025-005 — Dowel Pins paid (Dowel Supplier)', source:'bill', sourceId:'bill-h5',
+    lines:[{ accountId:'acct-1010', debit:30, credit:0 }, { accountId:'acct-5010', debit:0, credit:30 }] },
+  { id:'je-b6', date:'2025-08-22', postedAt:'2025-08-22T00:00:00.000Z', memo:'PO-2025-006 — Packaging paid (Packaging Supplier)', source:'bill', sourceId:'bill-h6',
+    lines:[{ accountId:'acct-1010', debit:1275, credit:0 }, { accountId:'acct-5010', debit:0, credit:1275 }] },
+  // ── WO-2025-001 (Batch 1, 500 units) ──────────────────────────────────────
+  { id:'je-w1', date:'2025-09-15', postedAt:'2025-09-15T00:00:00.000Z', memo:'WO-2025-001 — components consumed into WIP', source:'wo', sourceId:'wo-h1',
+    lines:[{ accountId:'acct-1040', debit:2145, credit:0 }, { accountId:'acct-1010', debit:0, credit:2145 }] },
+  { id:'je-w2', date:'2025-10-01', postedAt:'2025-10-01T00:00:00.000Z', memo:'WO-2025-001 — assembly fee invoiced (Assembly — Element Razor Black)', source:'wo', sourceId:'wo-h1',
+    lines:[{ accountId:'acct-1040', debit:3500, credit:0 }, { accountId:'acct-2010', debit:0, credit:3500 }] },
+  { id:'je-w2b', date:'2025-10-01', postedAt:'2025-10-01T00:00:00.000Z', memo:'WO-2025-001 — assembly fee paid (Assembly Factory)', source:'wo', sourceId:'wo-h1',
+    lines:[{ accountId:'acct-2010', debit:3500, credit:0 }, { accountId:'acct-5010', debit:0, credit:3500 }] },
+  { id:'je-w3', date:'2025-10-20', postedAt:'2025-10-20T00:00:00.000Z', memo:'WO-2025-001 — 500 units ELEMENT-B_10BLD completed into FG inventory', source:'wo', sourceId:'wo-h1',
+    lines:[{ accountId:'acct-1020', debit:5645, credit:0 }, { accountId:'acct-1040', debit:0, credit:5645 }] },
+  // ── FG bill (Batch 1 → Amazon FBA) ────────────────────────────────────────
+  { id:'je-b7', date:'2025-09-05', postedAt:'2025-09-05T00:00:00.000Z', memo:'PO-2025-007 — Element Razor Batch 1 paid (Assembly Factory)', source:'bill', sourceId:'bill-h7',
+    lines:[{ accountId:'acct-1020', debit:6960, credit:0 }, { accountId:'acct-5010', debit:0, credit:6960 }] },
+  // ── Component bill payments (Batch 2 — paid) ──────────────────────────────
+  { id:'je-b8', date:'2025-11-05', postedAt:'2025-11-05T00:00:00.000Z', memo:'PO-2025-008 — Zinc Heads paid (+7.5% price adj.)', source:'bill', sourceId:'bill-h8',
+    lines:[{ accountId:'acct-1010', debit:2150, credit:0 }, { accountId:'acct-5010', debit:0, credit:2150 }] },
+  { id:'je-b9', date:'2025-11-05', postedAt:'2025-11-05T00:00:00.000Z', memo:'PO-2025-009 — Aluminum Handles paid', source:'bill', sourceId:'bill-h9',
+    lines:[{ accountId:'acct-1010', debit:3000, credit:0 }, { accountId:'acct-5010', debit:0, credit:3000 }] },
+  { id:'je-b10', date:'2025-11-08', postedAt:'2025-11-08T00:00:00.000Z', memo:'PO-2025-010 — Anodized Handles paid', source:'bill', sourceId:'bill-h10',
+    lines:[{ accountId:'acct-1010', debit:1000, credit:0 }, { accountId:'acct-5010', debit:0, credit:1000 }] },
+  { id:'je-b11', date:'2025-11-03', postedAt:'2025-11-03T00:00:00.000Z', memo:'PO-2025-011 — Springs paid', source:'bill', sourceId:'bill-h11',
+    lines:[{ accountId:'acct-1010', debit:50, credit:0 }, { accountId:'acct-5010', debit:0, credit:50 }] },
+  { id:'je-b12', date:'2025-11-03', postedAt:'2025-11-03T00:00:00.000Z', memo:'PO-2025-012 — Dowel Pins paid', source:'bill', sourceId:'bill-h12',
+    lines:[{ accountId:'acct-1010', debit:20, credit:0 }, { accountId:'acct-5010', debit:0, credit:20 }] },
+  { id:'je-b13', date:'2025-11-05', postedAt:'2025-11-05T00:00:00.000Z', memo:'PO-2025-013 — Packaging paid (Batch 2, +5.9% price adj.)', source:'bill', sourceId:'bill-h13',
+    lines:[{ accountId:'acct-1010', debit:900, credit:0 }, { accountId:'acct-5010', debit:0, credit:900 }] },
+  // ── WO-2025-002 (Batch 2, 500 units) ──────────────────────────────────────
+  { id:'je-w4', date:'2025-11-25', postedAt:'2025-11-25T00:00:00.000Z', memo:'WO-2025-002 — components consumed into WIP', source:'wo', sourceId:'wo-h2',
+    lines:[{ accountId:'acct-1040', debit:2145, credit:0 }, { accountId:'acct-1010', debit:0, credit:2145 }] },
+  { id:'je-w5', date:'2025-12-20', postedAt:'2025-12-20T00:00:00.000Z', memo:'WO-2025-002 — assembly fee invoiced (Assembly — Element Razor Black)', source:'wo', sourceId:'wo-h2',
+    lines:[{ accountId:'acct-1040', debit:3500, credit:0 }, { accountId:'acct-2010', debit:0, credit:3500 }] },
+  { id:'je-w5b', date:'2025-12-20', postedAt:'2025-12-20T00:00:00.000Z', memo:'WO-2025-002 — assembly fee paid (Assembly Factory)', source:'wo', sourceId:'wo-h2',
+    lines:[{ accountId:'acct-2010', debit:3500, credit:0 }, { accountId:'acct-5010', debit:0, credit:3500 }] },
+  { id:'je-w6', date:'2026-01-10', postedAt:'2026-01-10T00:00:00.000Z', memo:'WO-2025-002 — 500 units ELEMENT-B_10BLD completed into FG inventory', source:'wo', sourceId:'wo-h2',
+    lines:[{ accountId:'acct-1020', debit:5645, credit:0 }, { accountId:'acct-1040', debit:0, credit:5645 }] },
+  // ── FG bill (Batch 2 → GrowthSpoke 3PL) ──────────────────────────────────
+  { id:'je-b14', date:'2025-11-18', postedAt:'2025-11-18T00:00:00.000Z', memo:'PO-2025-014 — Element Razor Batch 2 paid (Assembly Factory)', source:'bill', sourceId:'bill-h14',
+    lines:[{ accountId:'acct-1020', debit:6960, credit:0 }, { accountId:'acct-5010', debit:0, credit:6960 }] },
+  // ── WO-2026-001 (Batch 3, released — in progress) ─────────────────────────
+  { id:'je-w7', date:'2026-03-10', postedAt:'2026-03-10T00:00:00.000Z', memo:'WO-2026-001 — components consumed into WIP', source:'wo', sourceId:'wo-h3',
+    lines:[{ accountId:'acct-1040', debit:2145, credit:0 }, { accountId:'acct-1010', debit:0, credit:2145 }] },
+  // ── Direct-purchase FG: Blade Refill Pack (3 batches, all paid) ───────────
+  { id:'je-bl1', date:'2025-09-10', postedAt:'2025-09-10T00:00:00.000Z', memo:'PO-2025-BL1 — Blade Refill Pack paid ($3.50/ea, Feather Blade Co)', source:'bill', sourceId:'bill-bl1',
+    lines:[{ accountId:'acct-1020', debit:1750, credit:0 }, { accountId:'acct-5010', debit:0, credit:1750 }] },
+  { id:'je-bl2', date:'2025-12-05', postedAt:'2025-12-05T00:00:00.000Z', memo:'PO-2025-BL2 — Blade Refill Pack paid ($3.65/ea, +4.3%)', source:'bill', sourceId:'bill-bl2',
+    lines:[{ accountId:'acct-1020', debit:2190, credit:0 }, { accountId:'acct-5010', debit:0, credit:2190 }] },
+  { id:'je-bl3', date:'2026-02-10', postedAt:'2026-02-10T00:00:00.000Z', memo:'PO-2026-BL1 — Blade Refill Pack paid ($3.80/ea, +4.1%)', source:'bill', sourceId:'bill-bl3',
+    lines:[{ accountId:'acct-1020', debit:3040, credit:0 }, { accountId:'acct-5010', debit:0, credit:3040 }] },
+  // ── Direct-purchase FG: Stainless Razor Stand (3 batches, all paid) ───────
+  { id:'je-ss1', date:'2025-09-15', postedAt:'2025-09-15T00:00:00.000Z', memo:'PO-2025-SS1 — Razor Stand paid ($5.50/ea, ProFinish)', source:'bill', sourceId:'bill-ss1',
+    lines:[{ accountId:'acct-1020', debit:1100, credit:0 }, { accountId:'acct-5010', debit:0, credit:1100 }] },
+  { id:'je-ss2', date:'2025-12-15', postedAt:'2025-12-15T00:00:00.000Z', memo:'PO-2025-SS2 — Razor Stand paid ($5.90/ea, +7.3%)', source:'bill', sourceId:'bill-ss2',
+    lines:[{ accountId:'acct-1020', debit:1475, credit:0 }, { accountId:'acct-5010', debit:0, credit:1475 }] },
+  { id:'je-ss3', date:'2026-03-05', postedAt:'2026-03-05T00:00:00.000Z', memo:'PO-2026-SS1 — Razor Stand paid ($6.25/ea, +5.9%)', source:'bill', sourceId:'bill-ss3',
+    lines:[{ accountId:'acct-1020', debit:1875, credit:0 }, { accountId:'acct-5010', debit:0, credit:1875 }] },
+  // ── Direct-purchase FG: Travel Pouch (3 batches, all paid) ────────────────
+  { id:'je-tp1', date:'2025-10-10', postedAt:'2025-10-10T00:00:00.000Z', memo:'PO-2025-TP1 — Travel Pouch paid ($2.80/ea, ProFinish)', source:'bill', sourceId:'bill-tp1',
+    lines:[{ accountId:'acct-1020', debit:840, credit:0 }, { accountId:'acct-5010', debit:0, credit:840 }] },
+  { id:'je-tp2', date:'2026-01-15', postedAt:'2026-01-15T00:00:00.000Z', memo:'PO-2026-TP1 — Travel Pouch paid ($3.00/ea, +7.1%)', source:'bill', sourceId:'bill-tp2',
+    lines:[{ accountId:'acct-1020', debit:1050, credit:0 }, { accountId:'acct-5010', debit:0, credit:1050 }] },
+  { id:'je-tp3', date:'2026-03-10', postedAt:'2026-03-10T00:00:00.000Z', memo:'PO-2026-TP2 — Travel Pouch paid ($3.20/ea, +6.7%)', source:'bill', sourceId:'bill-tp3',
+    lines:[{ accountId:'acct-1020', debit:1280, credit:0 }, { accountId:'acct-5010', debit:0, credit:1280 }] },
+  // ── Current: PO-2026-002 — 1,000 units, deposit paid, in transit ──────────
+  { id:'je-c1a', date:'2026-03-12', postedAt:'2026-03-12T00:00:00.000Z', memo:'PO-2026-002 — Deposit paid to Assembly Factory ($6,960)', source:'bill', sourceId:'bill-c1',
+    lines:[{ accountId:'acct-1050', debit:6960, credit:0 }, { accountId:'acct-5010', debit:0, credit:6960 }] },
+  { id:'je-c1b', date:'2026-03-12', postedAt:'2026-03-12T00:00:00.000Z', memo:'PO-2026-002 — Invoice recorded, shipment in transit ($13,920)', source:'bill', sourceId:'bill-c1',
+    lines:[{ accountId:'acct-1030', debit:13920, credit:0 }, { accountId:'acct-2010', debit:0, credit:13920 }] },
+];
+
+const initialLocations = [
+  { id:'loc-1', name:'Amazon FBA',       type:'3PL',      notes:'Amazon fulfillment centers' },
+  { id:'loc-2', name:'GrowthSpoke 3PL',  type:'3PL',      notes:'Third-party logistics partner' },
+  { id:'loc-3', name:'Storage Unit',     type:'Internal', notes:'Local storage unit' },
+];
 
 
 // ── Persistence ────────────────────────────────────────────────────────────────
-const STORE_KEY = 'oneblade_erp_v4';
+const STORE_KEY = 'oneblade_erp_v6';
 
 function loadStore() {
   try {
@@ -110,18 +318,28 @@ function DataProvider({ children }) {
   const [accounts, setAccounts]          = useState(saved?.accounts           || initialAccounts);
   const [journal, setJournal]            = useState(saved?.journal            || initialJournal);
   const [activityLog, setActivityLog]    = useState(saved?.activityLog        || []);
-  const [bills, setBills]                = useState(saved?.bills                || []);
-  const [workOrders, setWorkOrders]      = useState(saved?.workOrders          || []);
+  const [bills, setBills]                = useState(saved?.bills                || initialBills);
+  const [workOrders, setWorkOrders]      = useState(saved?.workOrders          || initialWorkOrders);
+  const [locations, setLocations]        = useState(saved?.locations           || initialLocations);
 
   // Seed the ID counter from whatever is in storage
   useEffect(() => {
-    seedIdCounter([...suppliers, ...parts, ...finishedGoods, ...inventoryRecords, ...purchaseOrders, ...journal, ...activityLog]);
+    seedIdCounter([...suppliers, ...parts, ...finishedGoods, ...inventoryRecords, ...purchaseOrders, ...journal, ...activityLog, ...bills, ...workOrders]);
   }, []); // eslint-disable-line
+
+  // Sync: any PO with a linked bill should be 'billed'
+  useEffect(() => {
+    setPOs(prev => prev.map(po =>
+      po.orderStatus !== 'billed' && bills.some(b => b.poId === po.id)
+        ? { ...po, orderStatus: 'billed' }
+        : po
+    ));
+  }, [bills]);
 
   // Persist on every change
   useEffect(() => {
-    saveStore({ suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, accounts, journal, activityLog, bills, workOrders });
-  }, [suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, accounts, journal, activityLog, bills, workOrders]);
+    saveStore({ suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, accounts, journal, activityLog, bills, workOrders, locations });
+  }, [suppliers, parts, finishedGoods, inventoryRecords, purchaseOrders, accounts, journal, activityLog, bills, workOrders, locations]);
 
   // ── Journal engine ──────────────────────────────────────────────────────────
   const postEntry = useCallback((entry) => {
@@ -154,8 +372,8 @@ function DataProvider({ children }) {
 
   // ── Auto-posting: PO payment status changes ─────────────────────────────────
   // Called from updatePurchaseOrder when paymentStatus changes
-  // FG POs (any item with fgId) post to acct-1310; component POs post to acct-1300
-  const getPOInventoryAccount = (po) => po.items.some(i => i.fgId) ? 'acct-1310' : 'acct-1300';
+  // FG POs (any item with fgId) post to acct-1020 (FG); component POs post to acct-1010 (Components)
+  const getPOInventoryAccount = (po) => po.items.some(i => i.fgId) ? 'acct-1020' : 'acct-1010';
 
   const postPOPaymentEntry = useCallback((po, newPaymentStatus, prevPaymentStatus, amount) => {
     const sup = suppliers.find(s => s.id === po.supplierId);
@@ -163,30 +381,30 @@ function DataProvider({ children }) {
     const invAcct = getPOInventoryAccount(po);
 
     if (prevPaymentStatus === 'unpaid' && newPaymentStatus === 'deposit-paid') {
-      // Deposit paid: Prepaid DR / Cash CR
+      // Deposit paid: Prepaid DR / Cash Outflow CR
       postEntry({ date: today(), memo: `${po.poNumber} — Deposit paid to ${supName}`, source:'po', sourceId: po.id, lines:[
-        { accountId:'acct-1400', debit: amount, credit: 0 },
-        { accountId:'acct-1010', debit: 0, credit: amount },
+        { accountId:'acct-1050', debit: amount, credit: 0 },
+        { accountId:'acct-5010', debit: 0, credit: amount },
       ]});
       // AP for full amount: Inventory DR / AP CR
       postEntry({ date: today(), memo: `${po.poNumber} — Invoice recorded (AP)`, source:'po', sourceId: po.id, lines:[
         { accountId: invAcct, debit: po.totalCost, credit: 0 },
-        { accountId:'acct-2100', debit: 0, credit: po.totalCost },
+        { accountId:'acct-2010', debit: 0, credit: po.totalCost },
       ]});
     } else if (prevPaymentStatus === 'unpaid' && newPaymentStatus === 'paid') {
-      // Paid in full from unpaid: Inventory DR / Cash CR
+      // Paid in full from unpaid: Inventory DR / Cash Outflow CR
       postEntry({ date: today(), memo: `${po.poNumber} — Paid in full to ${supName}`, source:'po', sourceId: po.id, lines:[
         { accountId: invAcct, debit: po.totalCost, credit: 0 },
-        { accountId:'acct-1010', debit: 0, credit: po.totalCost },
+        { accountId:'acct-5010', debit: 0, credit: po.totalCost },
       ]});
     } else if (prevPaymentStatus === 'deposit-paid' && newPaymentStatus === 'paid') {
-      // Balance payment: clear AP + clear Prepaid, pay remainder from Cash
+      // Balance payment: clear AP + clear Prepaid, pay remainder from Cash Outflow
       const deposit = po.depositAmount || 0;
       const balance = po.totalCost - deposit;
       postEntry({ date: today(), memo: `${po.poNumber} — Balance paid to ${supName}`, source:'po', sourceId: po.id, lines:[
-        { accountId:'acct-2100', debit: po.totalCost, credit: 0      },  // clear AP
-        { accountId:'acct-1400', debit: 0,            credit: deposit },  // clear prepaid
-        { accountId:'acct-1010', debit: 0,            credit: balance },  // cash out
+        { accountId:'acct-2010', debit: po.totalCost, credit: 0      },  // clear AP
+        { accountId:'acct-1050', debit: 0,            credit: deposit },  // clear prepaid
+        { accountId:'acct-5010', debit: 0,            credit: balance },  // cash out
       ]});
     }
   }, [suppliers, postEntry]);
@@ -197,7 +415,7 @@ function DataProvider({ children }) {
     const invAcct = getPOInventoryAccount(po);
     postEntry({ date: today(), memo: `${po.poNumber} — Shipment received from ${sup?.name}`, source:'po', sourceId: po.id, lines:[
       { accountId: invAcct,      debit: po.totalCost, credit: 0           },
-      { accountId:'acct-1320',   debit: 0,            credit: po.totalCost },
+      { accountId:'acct-1030',   debit: 0,            credit: po.totalCost },
     ]});
   }, [suppliers, postEntry]);
 
@@ -212,6 +430,9 @@ function DataProvider({ children }) {
   const deleteWorkOrder     = useCallback((woId) => setWorkOrders(p => p.filter(w => w.id !== woId)), []);
   const updateBill          = useCallback((billId, updates) => setBills(p => p.map(b => b.id === billId ? { ...b, ...updates } : b)), []);
   const deleteBill          = useCallback((billId) => setBills(p => p.filter(b => b.id !== billId)), []);
+  const addLocation         = useCallback(loc => setLocations(p => [...p, { ...loc, id: nid('loc') }]), []);
+  const updateLocation      = useCallback((id, updates) => setLocations(p => p.map(l => l.id === id ? { ...l, ...updates } : l)), []);
+  const deleteLocation      = useCallback(id => setLocations(p => p.filter(l => l.id !== id)), []);
 
   const updatePurchaseOrder = useCallback((poId, updates) => {
     setPOs(prev => {
@@ -252,15 +473,6 @@ function DataProvider({ children }) {
   const getPartById      = useCallback(id => parts.find(p => p.id === id), [parts]);
   const getSupplierById  = useCallback(id => suppliers.find(s => s.id === id), [suppliers]);
 
-  // Manual sales summary entry
-  const postSalesSummary = useCallback(({ date, memo, revenue, cogs, units }) => {
-    postEntry({ date, memo, source: 'sales', sourceId: nid('sales'), lines: [
-      { accountId: 'acct-1010', debit: revenue, credit: 0      },
-      { accountId: 'acct-4000', debit: 0,       credit: revenue },
-      { accountId: 'acct-5010', debit: cogs,    credit: 0      },
-      { accountId: 'acct-1310', debit: 0,       credit: cogs   },
-    ]});
-  }, [postEntry]);
 
   // Dev helper — reset to seed data (accessible from console: window.__resetERP())
   useEffect(() => {
@@ -275,8 +487,8 @@ function DataProvider({ children }) {
     const componentCost = physicalLines.reduce((s, l) => s + l.qty * l.unitCost, 0);
     if (componentCost <= 0) return;
     postEntry({ date: wo.dateReleased || today(), memo: `${wo.woNumber} — components consumed into WIP`, source:'wo', sourceId: wo.id, lines:[
-      { accountId:'acct-1330', debit: componentCost, credit: 0 },
-      { accountId:'acct-1300', debit: 0, credit: componentCost },
+      { accountId:'acct-1040', debit: componentCost, credit: 0 },
+      { accountId:'acct-1010', debit: 0, credit: componentCost },
     ]});
   }, [postEntry]);
 
@@ -285,16 +497,16 @@ function DataProvider({ children }) {
     const assemblyFee  = serviceLines.reduce((s, l) => s + l.qty * l.unitCost, 0);
     if (assemblyFee <= 0) return;
     postEntry({ date: wo.dateAssemblyInvoice || today(), memo: `${wo.woNumber} — assembly fee invoiced (${serviceLines.map(l=>l.partName).join(', ')})`, source:'wo', sourceId: wo.id, lines:[
-      { accountId:'acct-1330', debit: assemblyFee, credit: 0 },
-      { accountId:'acct-2100', debit: 0, credit: assemblyFee },
+      { accountId:'acct-1040', debit: assemblyFee, credit: 0 },
+      { accountId:'acct-2010', debit: 0, credit: assemblyFee },
     ]});
   }, [postEntry]);
 
   const postWOCompletedEntry = useCallback((wo) => {
     const totalWIP = wo.bomLines.reduce((s, l) => s + l.qty * l.unitCost, 0);
     postEntry({ date: wo.dateCompleted || today(), memo: `${wo.woNumber} — ${wo.qtyOrdered} units ${wo.sku} completed into FG inventory`, source:'wo', sourceId: wo.id, lines:[
-      { accountId:'acct-1310', debit: totalWIP, credit: 0 },
-      { accountId:'acct-1330', debit: 0, credit: totalWIP },
+      { accountId:'acct-1020', debit: totalWIP, credit: 0 },
+      { accountId:'acct-1040', debit: 0, credit: totalWIP },
     ]});
   }, [postEntry]);
 
@@ -304,10 +516,11 @@ function DataProvider({ children }) {
       addSupplier, addPart, addFinishedGood, addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
       bills, addBill, updateBill, deleteBill,
       workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder,
+      locations, addLocation, updateLocation, deleteLocation,
       postWOReleasedEntry, postWOAssemblyInvoice, postWOCompletedEntry,
       updateBOM, updatePart, deletePart, updateSupplier, deleteSupplier, updateFinishedGood, deleteFinishedGood, getPartById, getSupplierById,
       addInventoryRecord, updateInventoryRecord, deleteInventoryRecord, transferInventory,
-      accounts, journal, addAccount, postEntry, reverseEntry, postSalesSummary,
+      accounts, journal, addAccount, postEntry, reverseEntry,
       activityLog, logEvent,
     }}>
       {children}
@@ -320,11 +533,28 @@ const useData = () => useContext(DataContext);
 const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
 const today = () => new Date().toISOString().split('T')[0];
 
+// Weighted average cost from received bill line items for a given SKU
+function computeWAC(sku, bills) {
+  let totalQty = 0, totalCost = 0;
+  bills.forEach(bill => {
+    if (bill.shipmentStatus !== 'received') return;
+    (bill.lineItems || []).forEach(li => {
+      if ((li.sku || '').trim() === sku.trim()) {
+        const q = parseFloat(li.qty) || 0;
+        totalQty  += q;
+        totalCost += q * (parseFloat(li.unitPrice) || 0);
+      }
+    });
+  });
+  if (totalQty === 0) return null;
+  return { wac: totalCost / totalQty, totalQty, totalCost };
+}
+
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const css = `
   @import url('${FONT_LINK}');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', system-ui, sans-serif; background: hsl(220,20%,97%); color: hsl(220,25%,10%); }
+  body { font-family: 'Inter', system-ui, sans-serif; background: hsl(220,20%,97%); color: hsl(220,25%,10%); font-variant-numeric: tabular-nums; }
   .mono { font-family: 'JetBrains Mono', monospace; }
   button { cursor: pointer; font-family: inherit; }
   input, select, textarea { font-family: inherit; }
@@ -333,7 +563,7 @@ const css = `
 `;
 
 // Status badge colors
-const orderStatusCls  = { draft:'badge-muted', 'pending-approval':'badge-yellow', approved:'badge-green', submitted:'badge-primary' };
+const orderStatusCls  = { draft:'badge-muted', 'pending-approval':'badge-yellow', approved:'badge-green', submitted:'badge-primary', billed:'badge-purple' };
 const paymentCls      = { unpaid:'badge-red', 'deposit-paid':'badge-yellow', paid:'badge-green' };
 const shippingCls     = { unshipped:'badge-muted', shipped:'badge-yellow', delivered:'badge-green' };
 const fgStatusCls     = { 'on-order':'badge-yellow', 'in-production':'badge-primary', shipped:'badge-green', received:'badge-green', sold:'badge-muted' };
@@ -356,6 +586,7 @@ const badgeStyle = {
   'badge-yellow':  { background:'hsl(38,92%,92%)',  color:'hsl(38,80%,35%)',  border:'1px solid hsl(38,80%,75%)' },
   'badge-red':     { background:'hsl(0,72%,93%)',   color:'hsl(0,72%,40%)',   border:'1px solid hsl(0,72%,75%)' },
   'badge-muted':   { background:'hsl(220,15%,92%)', color:'hsl(220,10%,46%)', border:'1px solid hsl(220,15%,82%)' },
+  'badge-purple':  { background:'hsl(270,60%,93%)', color:'hsl(270,60%,40%)', border:'1px solid hsl(270,60%,75%)' },
 };
 
 // ── UI Atoms ───────────────────────────────────────────────────────────────────
@@ -875,6 +1106,7 @@ function CreatePODialog() {
               <option value="pending-approval">Pending Approval</option>
               <option value="approved">Approved</option>
               <option value="submitted">Submitted to Supplier</option>
+              <option value="billed">Billed</option>
             </Select>
           </Field>
 
@@ -995,7 +1227,7 @@ function PODetail({ po, open, onClose, onBack }) {
       const W = 612, margin = 50;
       const fmtDate = d => { if (!d) return '—'; const [y,m,day] = d.split('-'); const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${months[+m-1]} ${+day}, ${y}`; };
       const fmtUSD = n => `$${(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-      const statusLabel = { draft:'Draft', 'pending-approval':'Pending Approval', approved:'Approved', submitted:'Submitted to Supplier' };
+      const statusLabel = { draft:'Draft', 'pending-approval':'Pending Approval', approved:'Approved', submitted:'Submitted to Supplier', billed:'Billed' };
 
       // Logo (top-right)
       try {
@@ -1143,6 +1375,7 @@ function PODetail({ po, open, onClose, onBack }) {
       memo: `Bill from ${po.poNumber}`,
       lineItems,
     });
+    updatePurchaseOrder(po.id, { orderStatus: 'billed' });
     toast.success(`Bill created for ${po.poNumber} — ${fmt(po.totalCost)}`);
   };
 
@@ -1303,7 +1536,7 @@ function PODetail({ po, open, onClose, onBack }) {
 
         {/* Status badges */}
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
-          <Badge cls={orderStatusCls[po.orderStatus]}>{{ draft:'Draft', 'pending-approval':'Pending Approval', approved:'Approved', submitted:'Submitted to Supplier' }[po.orderStatus] || po.orderStatus}</Badge>
+          <Badge cls={orderStatusCls[po.orderStatus]}>{{ draft:'Draft', 'pending-approval':'Pending Approval', approved:'Approved', submitted:'Submitted to Supplier', billed:'Billed' }[po.orderStatus] || po.orderStatus}</Badge>
         </div>
 
         {/* Supplier */}
@@ -1537,6 +1770,7 @@ function EditPODialog({ po, open, onClose, onSaved }) {
             <option value="pending-approval">Pending Approval</option>
             <option value="approved">Approved</option>
             <option value="submitted">Submitted to Supplier</option>
+            <option value="billed">Billed</option>
           </Select>
         </Field>
 
@@ -1669,6 +1903,7 @@ function BOMEditor({ fgId, bom }) {
 function Dashboard({ setPage }) {
   const { parts, inventoryRecords, purchaseOrders, finishedGoods, getPartById, getSupplierById, activityLog, bills } = useData();
   const [selectedPO, setSelectedPO] = useState(null);
+  const [invGroup, setInvGroup] = useState('none'); // 'none' | 'location' | 'type'
 
   // Total value of component/packaging inventory on hand
   const componentInventoryValue = inventoryRecords.reduce((sum, r) => {
@@ -1686,6 +1921,27 @@ function Dashboard({ setPage }) {
   const totalFGOnOrder  = fgPOItems.filter(i => i.shipStatus !== 'received').reduce((s,i) => s+i.qty, 0);
   const totalFGReceived = fgPOItems.filter(i => i.shipStatus === 'received').reduce((s,i) => s+i.qty, 0);
 
+  // Total value of FG on-hand: PO items with received bills + manual inventory records
+  const fgInventoryValue = (() => {
+    // From received PO items
+    const poValue = fgPOItems
+      .filter(i => i.shipStatus === 'received')
+      .reduce((sum, i) => sum + i.qty * i.unitCost, 0);
+    // From manual inventory records (e.g. transferred stock)
+    const manualValue = inventoryRecords
+      .filter(r => r.fgId)
+      .reduce((sum, r) => {
+        const fg = finishedGoods.find(f => f.id === r.fgId);
+        if (!fg) return sum;
+        const unitCost = fg.bom.reduce((s, l) => {
+          const p = getPartById(l.partId);
+          return s + (p ? p.unitCost * l.qty : 0);
+        }, 0) + fg.assemblyCost;
+        return sum + r.qty * unitCost;
+      }, 0);
+    return poValue + manualValue;
+  })();
+
   const fg = finishedGoods[0];
   const totalUnitCost = fg ? fg.bom.reduce((s,l) => { const p=getPartById(l.partId); return s+(p?p.unitCost*l.qty:0); }, 0) + fg.assemblyCost : 0;
 
@@ -1696,18 +1952,26 @@ function Dashboard({ setPage }) {
     return { part, totalQty, locations };
   });
 
-  // Inventory grouped by location (components only)
-  const locationMap = {};
-  inventoryRecords.forEach(r => {
-    const part = getPartById(r.partId);
-    if (!part || part.type === 'service') return;
-    if (!locationMap[r.location]) locationMap[r.location] = { qty: 0, value: 0, parts: {} };
-    locationMap[r.location].qty += r.qty;
-    locationMap[r.location].value += r.qty * part.unitCost;
-    locationMap[r.location].parts[part.name] = (locationMap[r.location].parts[part.name] || 0) + r.qty;
+  // Unified flat inventory rows (parts + FGs)
+  const partInvRows = inventoryRecords
+    .filter(r => r.partId && (() => { const p = getPartById(r.partId); return p && p.type !== 'service'; })())
+    .map(r => {
+      const p = getPartById(r.partId);
+      const unitCost = p.unitCost || 0;
+      return { id: r.id, name: p.name, sku: p.sku, qty: r.qty, unitCost, value: r.qty * unitCost, location: r.location || '—', type: p.type === 'packaging' ? 'Packaging' : 'Component' };
+    });
+  const fgInvRows = purchaseOrders.flatMap(po => {
+    const bill = bills.find(b => b.poId === po.id);
+    const shipStatus = bill?.shipmentStatus || 'open';
+    return po.items.filter(i => i.fgId).map(i => {
+      const fg = finishedGoods.find(f => f.id === i.fgId);
+      const location = shipStatus === 'received' ? (bill?.receivedLocation || 'Warehouse')
+        : shipStatus === 'in-transit' ? 'In Transit'
+        : 'Factory — On Order';
+      return { id: `${po.id}-${i.fgId}`, name: fg?.name || i.fgSku || '—', sku: i.fgSku || '—', qty: i.qty, unitCost: i.unitCost, value: i.qty * i.unitCost, location, type: 'Finished Good' };
+    });
   });
-  const inventoryByLocation = Object.entries(locationMap)
-    .sort((a, b) => b[1].value - a[1].value);
+  const allInvRows = [...partInvRows, ...fgInvRows].sort((a, b) => b.qty - a.qty);
 
   // PO vs vendor bill delta — only POs that have a linked bill
   const poBillDeltas = purchaseOrders
@@ -1718,6 +1982,11 @@ function Dashboard({ setPage }) {
     })
     .filter(Boolean);
   const totalBillDelta = poBillDeltas.reduce((s, d) => s + d.delta, 0);
+
+  // Sum of outstanding balance on all unpaid/partial/deposit-paid bills
+  const _openBills = bills.filter(b => ['unpaid','partial','deposit-paid'].includes(b.paymentStatus));
+  const unpaidBillsTotal = _openBills.reduce((sum, b) => sum + (b.amount - (b.amountPaid || 0)), 0);
+  const unpaidBillsCount = _openBills.length;
 
   const rowHover = { onMouseEnter: e => e.currentTarget.style.background='hsl(220,70%,98%)', onMouseLeave: e => e.currentTarget.style.background='transparent' };
 
@@ -1730,120 +1999,92 @@ function Dashboard({ setPage }) {
         </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
         <div style={{ cursor:'pointer' }} onClick={() => setPage('inventory')}>
           <StatCard title="Component Inventory Value" value={fmt(componentInventoryValue)} subtitle="Current on-hand components &amp; packaging" icon={Icons.Package} variant="primary" />
         </div>
-        <div style={{ cursor:'pointer' }} onClick={() => setPage('pos')}>
-          <StatCard title="FG On Order" value={`${totalFGOnOrder} units`} subtitle={`${totalFGReceived} received`} icon={Icons.Truck} variant="warning" />
+        <div style={{ cursor:'pointer' }} onClick={() => setPage('bom')}>
+          <StatCard title="Finished Goods Inventory Value" value={fmt(fgInventoryValue)} subtitle="Current on-hand FG across all locations" icon={Icons.Package} variant="success" />
+        </div>
+        <div style={{ cursor:'pointer' }} onClick={() => setPage('bills')}>
+          <StatCard title="Unpaid Supplier Bills" value={fmt(unpaidBillsTotal)} subtitle={`${unpaidBillsCount} bill${unpaidBillsCount !== 1 ? 's' : ''} outstanding`} icon={Icons.Dollar} variant="warning" />
         </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-
-        {/* Inventory — whole card clicks to Inventory page */}
-        <div onClick={() => setPage('inventory')} style={{ cursor:'pointer' }}>
-          <Card>
-          <CardHeader>
-            <CardTitle style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <span><Icons.Package size={15} /> Current Inventory by Part</span>
-              <span style={{ fontSize:11, color:'hsl(220,70%,45%)', fontWeight:600 }}>View all →</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {inventorySummary.map(({ part, totalQty, locations }) => (
-              <div key={part.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'10px 0', borderBottom:'1px solid hsl(220,15%,92%)' }}>
-                <div>
-                  <div style={{ fontSize:13, fontWeight:500 }}>{part.name}</div>
-                  <div style={{ fontSize:12, color:'hsl(220,10%,56%)', marginTop:2 }}>{locations.join(' · ')}</div>
-                </div>
-                <div style={{ textAlign:'right' }}>
-                  <div style={{ fontSize:13, fontWeight:700 }}>{totalQty.toLocaleString()}</div>
-                  <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{fmt(part.unitCost)}/ea</div>
-                </div>
-              </div>
+      {/* Current Inventory — consolidated */}
+      <Card>
+        <CardHeader>
+          <CardTitle style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <span><Icons.Package size={15} /> Current Inventory</span>
+            <span onClick={() => setPage('inventory')} style={{ fontSize:11, color:'hsl(220,70%,45%)', fontWeight:600, cursor:'pointer' }}>View all →</span>
+          </CardTitle>
+          {/* Group buttons */}
+          <div style={{ display:'flex', gap:6, marginTop:10 }}>
+            {[['none','All'],['location','By Location'],['type','By Type']].map(([val, label]) => (
+              <button key={val} onClick={() => setInvGroup(val)}
+                style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:5, border:'1px solid',
+                  background: invGroup===val ? 'hsl(220,70%,45%)' : 'transparent',
+                  color: invGroup===val ? '#fff' : 'hsl(220,10%,46%)',
+                  borderColor: invGroup===val ? 'hsl(220,70%,45%)' : 'hsl(220,15%,85%)',
+                  cursor:'pointer' }}>
+                {label}
+              </button>
             ))}
-          </CardContent>
-          </Card>
-        </div>
-
-        {/* FG POs — header clicks to POs page, each row opens PO modal */}
-        <Card>
-          <CardHeader>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer' }} onClick={() => setPage('pos')}>
-              <CardTitle><Icons.Truck size={15} /> Finished Good POs</CardTitle>
-              <span style={{ fontSize:11, color:'hsl(220,70%,45%)', fontWeight:600 }}>View all →</span>
-            </div>
-          </CardHeader>
-          <CardContent style={{ padding:0 }}>
-            {purchaseOrders.filter(po => po.items.some(i => i.fgId)).slice().reverse().map(po => {
-              const fgItem = po.items.find(i => i.fgId);
-              const fg = finishedGoods.find(f => f.id === fgItem?.fgId);
-              const bill = bills.find(b => b.poId === po.id);
-              const shipStatus = bill?.shipmentStatus || 'open';
-              const shipLabel = { open:'Awaiting Bill', 'in-transit':'In Transit', received:'Received' }[shipStatus];
-              const shipCls   = { open:'badge-muted', 'in-transit':'badge-yellow', received:'badge-green' }[shipStatus];
-              return (
-                <div key={po.id} onClick={() => setSelectedPO(po)}
-                  style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 16px', borderBottom:'1px solid hsl(220,15%,92%)', cursor:'pointer' }}
-                  {...rowHover}>
-                  <div>
-                    <div className="mono" style={{ fontSize:13, fontWeight:500, color:'hsl(220,70%,45%)' }}>{po.poNumber}</div>
-                    <div style={{ fontSize:12, color:'hsl(220,10%,56%)', marginTop:2 }}>{fgItem?.qty} units · {fg?.name || fgItem?.fgSku}</div>
-                  </div>
-                  <div style={{ textAlign:'right', display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
-                    <Badge cls={shipCls}>{shipLabel}</Badge>
-                    <div style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>{fmt(po.totalCost)}</div>
-                  </div>
+          </div>
+        </CardHeader>
+        <CardContent style={{ padding:0 }}>
+          {/* Table header */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 70px 60px', padding:'6px 16px', background:'hsl(220,15%,96%)', borderBottom:'1px solid hsl(220,15%,90%)' }}>
+            {['Name','SKU','$/unit','Qty'].map((h, i) => (
+              <div key={h} style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,56%)', textAlign: i > 1 ? 'right' : 'left' }}>{h}</div>
+            ))}
+          </div>
+          {/* Scrollable rows */}
+          <div style={{ overflowY:'auto', maxHeight:205 }}>
+            {(() => {
+              const ROW = ({ r }) => (
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 70px 60px', padding:'8px 16px', borderBottom:'1px solid hsl(220,15%,92%)' }}>
+                  <div style={{ fontSize:13, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.name}</div>
+                  <div className="mono" style={{ fontSize:11, color:'hsl(220,70%,45%)', alignSelf:'center' }}>{r.sku}</div>
+                  <div style={{ fontSize:12, color:'hsl(220,10%,46%)', textAlign:'right', alignSelf:'center' }}>{fmt(r.unitCost)}</div>
+                  <div style={{ fontSize:13, fontWeight:700, textAlign:'right', alignSelf:'center' }}>{r.qty.toLocaleString()}</div>
                 </div>
               );
-            })}
-            <div style={{ padding:'12px 16px', borderTop:'1px solid hsl(220,15%,90%)', display:'flex', justifyContent:'space-between', fontSize:13 }}>
-              <span style={{ color:'hsl(220,10%,56%)' }}>Unit COGS</span>
-              <span style={{ fontWeight:600 }}>{fmt(totalUnitCost)}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              const SUBTOTAL = ({ label, value }) => (
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 70px 60px', padding:'5px 16px', background:'hsl(220,15%,96%)', borderBottom:'1px solid hsl(220,15%,88%)' }}>
+                  <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', gridColumn:'1/3' }}>{label}</div>
+                  <div style={{ fontSize:12, fontWeight:700, textAlign:'right', color:'hsl(220,70%,40%)', gridColumn:'3/5', alignSelf:'center' }}>{fmt(value)}</div>
+                </div>
+              );
+              if (invGroup === 'none') {
+                return allInvRows.map(r => <ROW key={r.id} r={r} />);
+              }
+              const groupKey = invGroup === 'location' ? 'location' : 'type';
+              const groups = {};
+              allInvRows.forEach(r => {
+                const k = r[groupKey];
+                if (!groups[k]) groups[k] = [];
+                groups[k].push(r);
+              });
+              return Object.entries(groups).sort((a,b) => a[0].localeCompare(b[0])).flatMap(([group, rows]) => {
+                const subtotal = rows.reduce((s, r) => s + r.value, 0);
+                return [
+                  <SUBTOTAL key={`sub-${group}`} label={group} value={subtotal} />,
+                  ...rows.map(r => <ROW key={r.id} r={r} />),
+                ];
+              });
+            })()}
+          </div>
+          {/* Footer */}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 16px', borderTop:'1px solid hsl(220,15%,90%)', fontSize:13 }}>
+            <span onClick={() => setPage('inventory')} style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:500, cursor:'pointer' }}>View all in Inventory →</span>
+            <span style={{ fontWeight:700 }}>{fmt(allInvRows.reduce((s,r) => s + r.value, 0))}</span>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Inventory by Location + PO vs Bill Delta */}
+      {/* PO vs Bill Delta */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-
-        {/* Inventory by location */}
-        <div onClick={() => setPage('inventory')} style={{ cursor:'pointer' }}>
-          <Card>
-            <CardHeader>
-              <CardTitle style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span><Icons.Package size={15} /> Inventory by Location</span>
-                <span style={{ fontSize:11, color:'hsl(220,70%,45%)', fontWeight:600 }}>View all →</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {inventoryByLocation.length === 0 ? (
-                <div style={{ padding:'16px 0', textAlign:'center', color:'hsl(220,10%,65%)', fontSize:13 }}>No inventory records</div>
-              ) : inventoryByLocation.map(([location, data]) => (
-                <div key={location} style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'10px 0', borderBottom:'1px solid hsl(220,15%,92%)' }}>
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:500 }}>{location}</div>
-                    <div style={{ fontSize:12, color:'hsl(220,10%,56%)', marginTop:2 }}>
-                      {Object.entries(data.parts).map(([name, qty]) => `${name}: ${qty.toLocaleString()}`).join(' · ')}
-                    </div>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:13, fontWeight:700 }}>{fmt(data.value)}</div>
-                    <div style={{ fontSize:11, color:'hsl(220,10%,56%)' }}>{data.qty.toLocaleString()} units</div>
-                  </div>
-                </div>
-              ))}
-              {inventoryByLocation.length > 0 && (
-                <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, fontSize:13 }}>
-                  <span style={{ color:'hsl(220,10%,56%)' }}>Total</span>
-                  <span style={{ fontWeight:700 }}>{fmt(componentInventoryValue)}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
 
         {/* PO vs Supplier Bill delta */}
         <div onClick={e => { e.stopPropagation(); }} style={{ cursor:'default' }}>
@@ -2080,6 +2321,7 @@ function AddInventoryDialog() {
 function InventoryPage() {
   const { parts, finishedGoods, inventoryRecords, purchaseOrders, suppliers, getSupplierById, deleteInventoryRecord, updateInventoryRecord, bills } = useData();
   const [view, setView] = useState('part');   // 'part' | 'fg'
+  const [groupBy, setGroupBy] = useState('none'); // 'none' | 'location' | 'type'
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editQty, setEditQty] = useState('');
@@ -2203,7 +2445,7 @@ function InventoryPage() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>Inventory</div>
+          <div style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.5px' }}>Inventory</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>
             {filtered.length} records · {totalQty.toLocaleString()} units · <strong>{fmt(totalValue)}</strong> total value
           </div>
@@ -2224,6 +2466,17 @@ function InventoryPage() {
               color: view===v ? 'hsl(220,25%,10%)' : 'hsl(220,10%,56%)',
               boxShadow: view===v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             }}>{label}</button>
+          ))}
+        </div>
+        <div style={{ display:'flex', gap:5 }}>
+          {[['none','All'],['location','By Location'],['type','By Type']].map(([val, label]) => (
+            <button key={val} onClick={() => setGroupBy(val)}
+              style={{ fontSize:11, fontWeight:600, padding:'5px 12px', borderRadius:5, border:'1px solid', cursor:'pointer',
+                background: groupBy===val ? 'hsl(220,70%,45%)' : 'transparent',
+                color: groupBy===val ? '#fff' : 'hsl(220,10%,46%)',
+                borderColor: groupBy===val ? 'hsl(220,70%,45%)' : 'hsl(220,15%,85%)' }}>
+              {label}
+            </button>
           ))}
         </div>
         <div style={{ position:'relative', flex:1 }}>
@@ -2258,25 +2511,22 @@ function InventoryPage() {
               </tr>
             </thead>
             <tbody>
-              {Object.values(groups).length === 0 && (
+              {filtered.length === 0 && (
                 <tr><td colSpan={12} style={{ padding:'40px 14px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:13 }}>No inventory records match.</td></tr>
               )}
-              {Object.values(groups).map(({ name, sku, rows }) => (
-                rows.map((r, ri) => {
+              {(() => {
+                const getTypeLabel = r => r.type === 'fg' ? 'Finished Good' : r.partType === 'packaging' ? 'Packaging' : r.partType === 'service' ? 'Service' : 'Component';
+                const DataRow = ({ r, isGroupFirst = true }) => {
                   const isEditing = editingId === r.id;
-                  const isGroupFirst = ri === 0;
-                  const rowBg = ri % 2 === 0 ? 'white' : 'hsl(220,20%,99%)';
-                  const groupBorderTop = isGroupFirst && ri !== 0 ? '2px solid hsl(220,15%,88%)' : undefined;
                   return (
-                    <tr key={r.id} style={{ borderTop: groupBorderTop, background: rowBg }}
+                    <tr key={r.id} style={{ background:'white' }}
                       onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,98%)'}
-                      onMouseLeave={e => e.currentTarget.style.background=rowBg}>
-                      {/* Name — only show on first row of group */}
+                      onMouseLeave={e => e.currentTarget.style.background='white'}>
                       <td style={{ padding:'9px 14px', fontSize:13, fontWeight: isGroupFirst ? 600 : 400, color: isGroupFirst ? 'hsl(220,25%,10%)' : 'hsl(220,10%,70%)', borderBottom:'1px solid hsl(220,15%,92%)', verticalAlign:'middle' }}>
-                        {isGroupFirst ? name : ''}
+                        {isGroupFirst ? r.name : ''}
                       </td>
                       <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)', verticalAlign:'middle' }}>
-                        {isGroupFirst && <span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:600 }}>{sku}</span>}
+                        {isGroupFirst && <span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:600 }}>{r.sku}</span>}
                       </td>
                       {view === 'part' && (
                         <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)', verticalAlign:'middle' }}>
@@ -2326,8 +2576,38 @@ function InventoryPage() {
                       </td>
                     </tr>
                   );
-                })
-              ))}
+                };
+
+                if (groupBy === 'none') {
+                  // SKU-grouped (original behavior)
+                  return Object.values(groups).map(({ name, sku, rows }) =>
+                    rows.map((r, ri) => <DataRow key={r.id} r={r} isGroupFirst={ri === 0} />)
+                  );
+                }
+
+                // Group by location or type
+                const getGroupKey = r => groupBy === 'location' ? r.location : getTypeLabel(r);
+                const groupMap = {};
+                filtered.forEach(r => {
+                  const k = getGroupKey(r);
+                  if (!groupMap[k]) groupMap[k] = [];
+                  groupMap[k].push(r);
+                });
+                const colSpanLabel = view === 'part' ? 6 : 5;
+                return Object.entries(groupMap).sort((a,b) => a[0].localeCompare(b[0])).flatMap(([label, rows]) => {
+                  const subtotal = rows.reduce((s,r) => s + r.value, 0);
+                  return [
+                    <tr key={`grp-${label}`} style={{ background:'hsl(220,15%,94%)', borderTop:'2px solid hsl(220,15%,85%)' }}>
+                      <td colSpan={colSpanLabel} style={{ padding:'7px 14px', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,40%)' }}>{label}</td>
+                      <td style={{ padding:'7px 14px', textAlign:'right', fontSize:12 }} />
+                      <td style={{ padding:'7px 14px', textAlign:'right', fontSize:12 }} />
+                      <td style={{ padding:'7px 14px', textAlign:'right', fontSize:13, fontWeight:700, color:'hsl(220,70%,40%)' }}>{fmt(subtotal)}</td>
+                      <td colSpan={3} />
+                    </tr>,
+                    ...rows.map(r => <DataRow key={r.id} r={r} isGroupFirst={true} />),
+                  ];
+                });
+              })()}
             </tbody>
             {filtered.length > 0 && (
               <tfoot>
@@ -2369,24 +2649,52 @@ function InlineStatusSelect({ value, onChange, options, colorMap }) {
 }
 
 function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
-  const { purchaseOrders, getPartById, getSupplierById, updatePurchaseOrder, finishedGoods } = useData();
+  const { purchaseOrders, getPartById, getSupplierById, updatePurchaseOrder, finishedGoods, suppliers } = useData();
   const [selectedPO, setSelectedPO] = useState(null);
-  const displayedPOs = supplierFilter ? purchaseOrders.filter(po => po.supplierId === supplierFilter.id) : purchaseOrders;
+  const [fSupplier, setFSupplier] = useState('');
+  const [fItem,     setFItem]     = useState('');
+  const [fStatus,   setFStatus]   = useState('');
+
+  // Sync external supplierFilter prop (e.g. clicked from Supplier Directory)
+  useEffect(() => {
+    if (supplierFilter) setFSupplier(supplierFilter.id);
+  }, [supplierFilter?.id]);
+
+  const clearAll = () => { setFSupplier(''); setFItem(''); setFStatus(''); if (clearFilter) clearFilter(); };
+  const activeCount = [fSupplier, fItem.trim(), fStatus].filter(Boolean).length;
+
+  const displayedPOs = purchaseOrders.filter(po => {
+    if (fSupplier && po.supplierId !== fSupplier) return false;
+    if (fStatus   && po.orderStatus !== fStatus)  return false;
+    if (fItem.trim()) {
+      const q = fItem.trim().toLowerCase();
+      const haystack = po.items.map(item => {
+        if (item.partId) { const p = getPartById(item.partId); return `${p?.name||''} ${p?.sku||''}`.toLowerCase(); }
+        const fg = finishedGoods.find(f => f.id === item.fgId);
+        return `${fg?.name||''} ${item.fgSku||''}`.toLowerCase();
+      }).join(' ');
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+
   const totalSpend = displayedPOs.reduce((s,po) => s+po.totalCost, 0);
-  const openPOs = displayedPOs.filter(po => po.orderStatus==='submitted');
+  const openPOs    = displayedPOs.filter(po => po.orderStatus==='submitted');
 
   const update = (poId, field, value) => {
     updatePurchaseOrder(poId, { [field]: value });
     toast.success('PO updated');
   };
 
+  const selectStyle = { padding:'7px 10px', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:6, background:'white', fontFamily:'inherit', color:'hsl(220,25%,10%)', cursor:'pointer', outline:'none' };
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>Purchase Orders</div>
+          <div style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.5px' }}>Purchase Orders</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>
-            {purchaseOrders.length} total · {openPOs.length} open · Total spend: <strong>{fmt(totalSpend)}</strong>
+            {displayedPOs.length}{activeCount > 0 ? ` of ${purchaseOrders.length}` : ''} orders · {openPOs.length} open · Total: <strong>{fmt(totalSpend)}</strong>
           </div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
@@ -2394,13 +2702,39 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
         </div>
       </div>
 
-      {supplierFilter && (
-        <div style={{ display:'flex', alignItems:'center', gap:10, background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:8, padding:'10px 16px' }}>
-          <Icons.Users size={14} color="hsl(220,70%,45%)" />
-          <span style={{ fontSize:13, color:'hsl(220,70%,40%)', fontWeight:500 }}>Filtered by: <strong>{supplierFilter.name}</strong></span>
-          <button onClick={clearFilter} style={{ marginLeft:'auto', background:'none', border:'none', color:'hsl(220,70%,45%)', fontSize:12, cursor:'pointer', fontWeight:600 }}>✕ Clear filter</button>
+      {/* Filter bar */}
+      <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+        <select value={fSupplier} onChange={e => { setFSupplier(e.target.value); if (clearFilter && !e.target.value) clearFilter(); }} style={{ ...selectStyle, minWidth:160 }}>
+          <option value="">All Suppliers</option>
+          {suppliers.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
+
+        <select value={fStatus} onChange={e => setFStatus(e.target.value)} style={{ ...selectStyle, minWidth:160 }}>
+          <option value="">All Statuses</option>
+          {[['draft','Draft'],['pending-approval','Pending Approval'],['approved','Approved'],['submitted','Submitted'],['billed','Billed']].map(([v,l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+
+        <div style={{ position:'relative', flex:'1 1 180px', maxWidth:280 }}>
+          <div style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}>
+            <Icons.Search size={13} color="hsl(220,10%,60%)" />
+          </div>
+          <input value={fItem} onChange={e => setFItem(e.target.value)}
+            placeholder="Search items / SKU…"
+            style={{ ...selectStyle, width:'100%', paddingLeft:28, paddingRight: fItem ? 26 : 10 }} />
+          {fItem && <button onClick={() => setFItem('')} style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'hsl(220,10%,56%)', fontSize:15, cursor:'pointer', lineHeight:1 }}>×</button>}
         </div>
-      )}
+
+        {activeCount > 0 && (
+          <button onClick={clearAll}
+            style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:6, padding:'7px 12px', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+            ✕ Clear {activeCount > 1 ? `${activeCount} filters` : 'filter'}
+          </button>
+        )}
+      </div>
 
       <div style={{ fontSize:12, color:'hsl(220,10%,56%)', display:'flex', alignItems:'center', gap:6 }}>
         <span style={{ background:'hsl(220,15%,92%)', borderRadius:4, padding:'2px 7px', fontSize:11 }}>Tip</span>
@@ -2416,6 +2750,9 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
               </tr>
             </thead>
             <tbody>
+              {displayedPOs.length === 0 && (
+                <tr><td colSpan={6} style={{ padding:'40px 14px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:13 }}>No purchase orders match your filters.</td></tr>
+              )}
               {displayedPOs.slice().reverse().map(po => {
                 const supplier = getSupplierById(po.supplierId);
                 return (
@@ -2441,7 +2778,7 @@ function PurchaseOrdersPage({ supplierFilter, clearFilter }) {
                         value={po.orderStatus}
                         onChange={v => update(po.id, 'orderStatus', v)}
                         colorMap={orderStatusCls}
-                        options={[['draft','Draft'],['pending-approval','Pending Approval'],['approved','Approved'],['submitted','Submitted to Supplier']]}
+                        options={[['draft','Draft'],['pending-approval','Pending Approval'],['approved','Approved'],['submitted','Submitted to Supplier'],['billed','Billed']]}
                       />
                     </td>
                     <TD muted>{po.dateOrdered}</TD>
@@ -2582,6 +2919,126 @@ function TransferDialog({ records, partName, sku, open, onClose }) {
   );
 }
 
+function PriceHistoryModal({ item, bills, open, onClose }) {
+  if (!open || !item) return null;
+  const { sku, name } = item;
+
+  // Collect all received bill line items matching this SKU, with bill metadata
+  const entries = [];
+  bills.forEach((bill, billIdx) => {
+    if (bill.shipmentStatus !== 'received') return;
+    (bill.lineItems || []).forEach(li => {
+      if ((li.sku || '').trim() !== sku.trim()) return;
+      const qty = parseFloat(li.qty) || 0;
+      const unitPrice = parseFloat(li.unitPrice) || 0;
+      entries.push({
+        billNum: `BILL-${String(bills.length - billIdx).padStart(3,'0')}`,
+        billId: bill.id,
+        poNumber: bill.poNumber || '—',
+        date: bill.dateCreated || '',
+        receivedLocation: bill.receivedLocation || '—',
+        qty,
+        unitPrice,
+        extended: qty * unitPrice,
+      });
+    });
+  });
+  entries.sort((a, b) => a.date.localeCompare(b.date));
+
+  const totalQty  = entries.reduce((s, e) => s + e.qty, 0);
+  const totalCost = entries.reduce((s, e) => s + e.extended, 0);
+  const wac = totalQty > 0 ? totalCost / totalQty : 0;
+
+  // Compute price trend
+  const prices = entries.map(e => e.unitPrice);
+  const firstPrice = prices[0] || 0;
+  const lastPrice  = prices[prices.length - 1] || 0;
+  const priceDelta = lastPrice - firstPrice;
+  const pricePct   = firstPrice > 0 ? (priceDelta / firstPrice) * 100 : 0;
+
+  return (
+    <Modal title={`Price History — ${name}`} open={open} onClose={onClose} wide>
+      <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        {/* Summary strip */}
+        <div style={{ display:'flex', gap:16, flexWrap:'wrap', background:'hsl(220,15%,97%)', borderRadius:8, padding:'12px 16px' }}>
+          <span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:700, alignSelf:'center' }}>{sku}</span>
+          <div style={{ display:'flex', flexDirection:'column' }}>
+            <span style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.4 }}>Wtd. Avg Cost</span>
+            <span style={{ fontSize:18, fontWeight:700, color:'hsl(220,25%,10%)' }}>{fmt(wac)}</span>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column' }}>
+            <span style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.4 }}>Total Received</span>
+            <span style={{ fontSize:18, fontWeight:700 }}>{totalQty.toLocaleString()} units</span>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column' }}>
+            <span style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.4 }}>Total Billed</span>
+            <span style={{ fontSize:18, fontWeight:700 }}>{fmt(totalCost)}</span>
+          </div>
+          {entries.length > 1 && (
+            <div style={{ display:'flex', flexDirection:'column' }}>
+              <span style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.4 }}>Price Trend</span>
+              <span style={{ fontSize:15, fontWeight:700, color: priceDelta > 0 ? 'hsl(0,65%,45%)' : priceDelta < 0 ? 'hsl(160,55%,35%)' : 'hsl(220,10%,50%)' }}>
+                {priceDelta > 0 ? '▲' : priceDelta < 0 ? '▼' : '—'} {Math.abs(pricePct).toFixed(1)}% since first order
+              </span>
+            </div>
+          )}
+        </div>
+
+        {entries.length === 0 ? (
+          <div style={{ textAlign:'center', padding:'32px 16px', color:'hsl(220,10%,56%)', fontSize:13 }}>
+            No received bills found for this SKU.
+          </div>
+        ) : (
+          <table>
+            <thead>
+              <tr style={{ background:'hsl(220,15%,96%)' }}>
+                {['Bill #','PO #','Date','Destination','Qty','Unit Price','Extended'].map((h, i) => (
+                  <th key={h} style={{ padding:'8px 12px', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.4, color:'hsl(220,10%,46%)', textAlign: i >= 4 ? 'right' : 'left', borderBottom:'1px solid hsl(220,15%,88%)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((e, i) => {
+                const isFirst = i === 0;
+                const prevPrice = i > 0 ? entries[i-1].unitPrice : null;
+                const diff = prevPrice !== null ? e.unitPrice - prevPrice : null;
+                return (
+                  <tr key={e.billId + i} style={{ borderBottom:'1px solid hsl(220,15%,93%)' }}
+                    onMouseEnter={ev => ev.currentTarget.style.background='hsl(220,70%,98%)'}
+                    onMouseLeave={ev => ev.currentTarget.style.background='white'}>
+                    <td style={{ padding:'9px 12px' }}><span className="mono" style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)' }}>{e.billNum}</span></td>
+                    <td style={{ padding:'9px 12px' }}><span className="mono" style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>{e.poNumber}</span></td>
+                    <td style={{ padding:'9px 12px', fontSize:13 }}>{e.date}</td>
+                    <td style={{ padding:'9px 12px', fontSize:13 }}>{e.receivedLocation}</td>
+                    <td style={{ padding:'9px 12px', fontSize:13, textAlign:'right', fontWeight:500 }}>{e.qty.toLocaleString()}</td>
+                    <td style={{ padding:'9px 12px', textAlign:'right' }}>
+                      <span style={{ fontSize:13, fontWeight:600 }}>{fmt(e.unitPrice)}</span>
+                      {diff !== null && (
+                        <span style={{ fontSize:10, marginLeft:5, color: diff > 0 ? 'hsl(0,65%,45%)' : diff < 0 ? 'hsl(160,55%,35%)' : 'hsl(220,10%,60%)', fontWeight:600 }}>
+                          {diff > 0 ? '▲' : diff < 0 ? '▼' : ''}{diff !== 0 ? ` ${fmt(Math.abs(diff))}` : ''}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding:'9px 12px', fontSize:13, textAlign:'right', fontWeight:500 }}>{fmt(e.extended)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
+                <td colSpan={4} style={{ padding:'10px 12px', fontSize:12 }}>Weighted Average Cost</td>
+                <td style={{ padding:'10px 12px', textAlign:'right', fontSize:13 }}>{totalQty.toLocaleString()}</td>
+                <td style={{ padding:'10px 12px', textAlign:'right', fontSize:13, color:'hsl(220,70%,45%)' }}>{fmt(wac)}</td>
+                <td style={{ padding:'10px 12px', textAlign:'right', fontSize:13 }}>{fmt(totalCost)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function BOMPage() {
   const { finishedGoods, parts, getPartById, getSupplierById, inventoryRecords, purchaseOrders, bills } = useData();
   const [editFG, setEditFG] = useState(null);
@@ -2589,11 +3046,13 @@ function BOMPage() {
   const [detailFG, setDetailFG] = useState(null); // FG detail modal (BOM + COGS)
   const [search, setSearch] = useState('');
   const [transferRow, setTransferRow] = useState(null); // { records, partName, sku }
+  const [groupBy, setGroupBy] = useState('none'); // 'none' | 'location' | 'type'
+  const [priceHistoryItem, setPriceHistoryItem] = useState(null); // { sku, name }
   const pct = n => `${(n*100).toFixed(1)}%`;
 
   // ── Build unified inventory rows ──────────────────────────────────────────
 
-  // Parts rows: aggregate all inventory records per part
+  // Parts rows: aggregate all inventory records per part; unit cost = WAC from bills (fallback to catalog)
   const partRows = parts.map(p => {
     const records = inventoryRecords.filter(r => r.partId === p.id);
     const totalQty = records.reduce((s, r) => s + (r.qty || 0), 0);
@@ -2601,6 +3060,8 @@ function BOMPage() {
     const locationStr = locations.length === 0 ? '—'
       : locations.length === 1 ? locations[0]
       : `Multiple (${locations.length})`;
+    const wacResult = computeWAC(p.sku, bills);
+    const unitCost = wacResult ? wacResult.wac : p.unitCost;
     return {
       id: p.id,
       kind: 'part',
@@ -2610,18 +3071,20 @@ function BOMPage() {
       supplier: getSupplierById(p.supplierId)?.shortName || '—',
       location: locationStr,
       qty: totalQty,
-      unitCost: p.unitCost,
+      unitCost,
       freightCost: p.freightCost,
       notes: p.notes || '—',
+      hasWAC: !!wacResult,
       _part: p,
     };
   });
 
-  // FG rows: unit cost = landed COGS; location from POs+bills + manual records
+  // FG rows: unit cost = WAC (if bills exist) or landed COGS; location from POs+bills + manual records
   const fgRows = finishedGoods.map(fg => {
     const componentCost = fg.bom.reduce((s,l) => { const p=getPartById(l.partId); return s+(p?p.unitCost*l.qty:0); }, 0);
     const freightTotal  = fg.bom.reduce((s,l) => { const p=getPartById(l.partId); return s+(p?p.freightCost*l.qty:0); }, 0);
     const totalLanded   = componentCost + freightTotal + fg.assemblyCost;
+    const wacResult = computeWAC(fg.sku, bills);
 
     // Gather qty + locations from PO items
     const poLocations = [];
@@ -2647,18 +3110,22 @@ function BOMPage() {
       : allLocations.length === 1 ? allLocations[0]
       : `Multiple (${allLocations.length})`;
 
+    const unitCost = wacResult ? wacResult.wac : totalLanded;
+    const sup = fg.supplierId ? getSupplierById(fg.supplierId) : null;
     return {
       id: fg.id,
       kind: 'fg',
       name: fg.name,
       sku: fg.sku,
-      type: 'Finished Good',
-      supplier: '—',
+      type: fg.purchasedDirect ? 'Purchased Direct' : 'Finished Good',
+      supplier: sup?.shortName || '—',
       location: locationStr,
       qty: poQty + manualQty,
-      unitCost: totalLanded,
+      unitCost,
       freightCost: freightTotal,
-      notes: '—',
+      notes: fg.purchasedDirect ? 'Purchased outright' : '—',
+      hasWAC: !!wacResult,
+      purchasedDirect: !!fg.purchasedDirect,
       _fg: fg,
       _componentCost: componentCost,
       _freightTotal: freightTotal,
@@ -2666,20 +3133,22 @@ function BOMPage() {
     };
   });
 
-  const allRows = [...partRows, ...fgRows];
+  const allRows = [...partRows, ...fgRows].map(r => ({ ...r, value: (r.qty||0) * (r.unitCost||0) }));
   const q = search.toLowerCase().trim();
   const filtered = q
     ? allRows.filter(r => [r.name, r.sku, r.type, r.supplier, r.location, r.notes].join(' ').toLowerCase().includes(q))
     : allRows;
+  const totalValue = filtered.reduce((s,r) => s + r.value, 0);
+  const totalQtyAll = filtered.reduce((s,r) => s + (r.qty||0), 0);
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>Inventory</div>
+          <div style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.5px' }}>Inventory</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>
-            Click any row to view details or edit · FG unit cost reflects full landed COGS · Transfer button moves stock between locations
+            Click row to edit · Unit cost = weighted avg of received bills · History button shows price history per SKU
           </div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
@@ -2690,16 +3159,29 @@ function BOMPage() {
       {/* All Inventory */}
       <Card>
         <CardHeader>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
             <CardTitle><Icons.Package size={15} /> All Inventory</CardTitle>
-            <div style={{ position:'relative' }}>
-              <div style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}>
-                <Icons.Search size={13} color="hsl(220,10%,60%)" />
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              <div style={{ display:'flex', gap:5 }}>
+                {[['none','All'],['location','By Location'],['type','By Type']].map(([val, label]) => (
+                  <button key={val} onClick={() => setGroupBy(val)}
+                    style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:5, border:'1px solid', cursor:'pointer',
+                      background: groupBy===val ? 'hsl(220,70%,45%)' : 'transparent',
+                      color: groupBy===val ? '#fff' : 'hsl(220,10%,46%)',
+                      borderColor: groupBy===val ? 'hsl(220,70%,45%)' : 'hsl(220,15%,85%)' }}>
+                    {label}
+                  </button>
+                ))}
               </div>
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search name, SKU, type, location…"
-                style={{ padding:'6px 28px 6px 28px', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:6, fontFamily:'inherit', outline:'none', width:240 }} />
-              {search && <button onClick={() => setSearch('')} style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'hsl(220,10%,56%)', fontSize:15, cursor:'pointer', lineHeight:1 }}>×</button>}
+              <div style={{ position:'relative' }}>
+                <div style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}>
+                  <Icons.Search size={13} color="hsl(220,10%,60%)" />
+                </div>
+                <input value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Search name, SKU, type, location…"
+                  style={{ padding:'6px 28px 6px 28px', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:6, fontFamily:'inherit', outline:'none', width:240 }} />
+                {search && <button onClick={() => setSearch('')} style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'hsl(220,10%,56%)', fontSize:15, cursor:'pointer', lineHeight:1 }}>×</button>}
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -2707,48 +3189,97 @@ function BOMPage() {
           <table>
             <thead>
               <tr style={{ background:'hsl(220,15%,96%)' }}>
-                <TH>Name</TH><TH>SKU</TH><TH>Type</TH><TH>Supplier</TH><TH>Location</TH><TH right>Qty</TH><TH right>Unit Cost</TH><TH right>Freight</TH><TH>Notes</TH><TH></TH>
+                <TH>Name</TH><TH>SKU</TH><TH>Type</TH><TH>Supplier</TH><TH>Location</TH><TH right>Qty</TH><TH right>Unit Cost</TH><TH right>Freight</TH><TH>Notes</TH><TH right>Value</TH><TH></TH>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={9} style={{ padding:'40px 14px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:13 }}>No items match your search.</td></tr>
+                <tr><td colSpan={11} style={{ padding:'40px 14px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:13 }}>No items match your search.</td></tr>
               )}
-              {filtered.map(r => {
-                const partRecords = r.kind === 'part'
-                  ? inventoryRecords.filter(inv => inv.partId === r._part?.id && inv.qty > 0)
-                  : [];
-                return (
-                <tr key={r.id} style={{ cursor:'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,98%)'}
-                  onMouseLeave={e => e.currentTarget.style.background='white'}
-                  onClick={() => r.kind === 'fg' ? setDetailFG(r) : setEditPart(r._part)}>
-                  <td style={{ padding:'9px 14px', fontSize:13, fontWeight:500, borderBottom:'1px solid hsl(220,15%,92%)' }}>{r.name}</td>
-                  <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}>
-                    <span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:600 }}>{r.sku}</span>
-                  </td>
-                  <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}>
-                    <Badge cls={r.kind === 'fg' ? 'badge-primary' : 'badge-muted'}>{r.type}</Badge>
-                  </td>
-                  <TD muted><span style={{ fontSize:12 }}>{r.supplier}</span></TD>
-                  <td style={{ padding:'9px 14px', fontSize:12, borderBottom:'1px solid hsl(220,15%,92%)', color: r.location === '—' ? 'hsl(220,10%,72%)' : 'hsl(220,25%,10%)' }}>{r.location}</td>
-                  <TD right><span style={{ fontSize:12, color: r.qty === 0 ? 'hsl(220,10%,72%)' : 'inherit' }}>{r.qty > 0 ? r.qty.toLocaleString() : '—'}</span></TD>
-                  <TD right>{fmt(r.unitCost)}</TD>
-                  <TD right muted>{fmt(r.freightCost)}</TD>
-                  <TD muted><span style={{ fontSize:12 }}>{r.notes}</span></TD>
-                  <td style={{ padding:'6px 10px', borderBottom:'1px solid hsl(220,15%,92%)', textAlign:'right' }}>
-                    {r.kind === 'part' && partRecords.length > 0 && (
-                      <button
-                        onClick={e => { e.stopPropagation(); setTransferRow({ records: partRecords, partName: r.name, sku: r.sku }); }}
-                        style={{ fontSize:11, fontWeight:600, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:5, padding:'4px 9px', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                        Transfer
-                      </button>
-                    )}
-                  </td>
-                </tr>
-                );
-              })}
+              {(() => {
+                const DataRow = ({ r }) => {
+                  const partRecords = r.kind === 'part'
+                    ? inventoryRecords.filter(inv => inv.partId === r._part?.id && inv.qty > 0)
+                    : [];
+                  return (
+                    <tr key={r.id} style={{ cursor:'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.background='hsl(220,70%,98%)'}
+                      onMouseLeave={e => e.currentTarget.style.background='white'}
+                      onClick={() => r.kind === 'fg' ? setDetailFG(r) : setEditPart(r._part)}>
+                      <td style={{ padding:'9px 14px', fontSize:13, fontWeight:500, borderBottom:'1px solid hsl(220,15%,92%)' }}>{r.name}</td>
+                      <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}>
+                        <span className="mono" style={{ fontSize:12, color:'hsl(220,70%,45%)', fontWeight:600 }}>{r.sku}</span>
+                      </td>
+                      <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)' }}>
+                        <Badge cls={r.kind === 'fg' ? 'badge-primary' : 'badge-muted'}>{r.type}</Badge>
+                      </td>
+                      <TD muted><span style={{ fontSize:12 }}>{r.supplier}</span></TD>
+                      <td style={{ padding:'9px 14px', fontSize:12, borderBottom:'1px solid hsl(220,15%,92%)', color: r.location === '—' ? 'hsl(220,10%,72%)' : 'hsl(220,25%,10%)' }}>{r.location}</td>
+                      <TD right><span style={{ fontSize:12, color: r.qty === 0 ? 'hsl(220,10%,72%)' : 'inherit' }}>{r.qty > 0 ? r.qty.toLocaleString() : '—'}</span></TD>
+                      <td style={{ padding:'9px 14px', borderBottom:'1px solid hsl(220,15%,92%)', textAlign:'right' }}>
+                        <span style={{ fontWeight:500 }}>{fmt(r.unitCost)}</span>
+                        {r.hasWAC && <span style={{ fontSize:9, marginLeft:4, color:'hsl(220,70%,50%)', fontWeight:700, verticalAlign:'super' }}>WAC</span>}
+                      </td>
+                      <TD right muted>{r.freightCost > 0 ? fmt(r.freightCost) : <span style={{ color:'hsl(220,15%,75%)' }}>—</span>}</TD>
+                      <TD muted><span style={{ fontSize:12 }}>{r.notes}</span></TD>
+                      <TD right bold>{r.value > 0 ? fmt(r.value) : <span style={{ color:'hsl(220,15%,70%)' }}>—</span>}</TD>
+                      <td style={{ padding:'6px 10px', borderBottom:'1px solid hsl(220,15%,92%)', textAlign:'right', whiteSpace:'nowrap' }}>
+                        <button
+                          onClick={e => { e.stopPropagation(); setPriceHistoryItem({ sku: r.sku, name: r.name }); }}
+                          title="View price history"
+                          style={{ fontSize:11, fontWeight:600, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:5, padding:'4px 9px', cursor:'pointer', fontFamily:'inherit', marginRight: r.kind==='part' && partRecords.length>0 ? 5 : 0 }}>
+                          ₪ History
+                        </button>
+                        {r.kind === 'part' && partRecords.length > 0 && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setTransferRow({ records: partRecords, partName: r.name, sku: r.sku }); }}
+                            style={{ fontSize:11, fontWeight:600, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:5, padding:'4px 9px', cursor:'pointer', fontFamily:'inherit' }}>
+                            Transfer
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                };
+
+                if (groupBy === 'none') {
+                  return filtered.map(r => <DataRow key={r.id} r={r} />);
+                }
+
+                const getGroupKey = r => groupBy === 'location' ? r.location : r.type;
+                const groupMap = {};
+                filtered.forEach(r => {
+                  const k = getGroupKey(r);
+                  if (!groupMap[k]) groupMap[k] = [];
+                  groupMap[k].push(r);
+                });
+                return Object.entries(groupMap).sort((a,b) => a[0].localeCompare(b[0])).flatMap(([label, rows]) => {
+                  const subQty = rows.reduce((s,r) => s + (r.qty||0), 0);
+                  const subValue = rows.reduce((s,r) => s + r.value, 0);
+                  return [
+                    <tr key={`grp-${label}`} style={{ background:'hsl(220,15%,94%)', borderTop:'2px solid hsl(220,15%,85%)' }}>
+                      <td colSpan={5} style={{ padding:'7px 14px', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,40%)' }}>{label}</td>
+                      <td style={{ padding:'7px 14px', textAlign:'right', fontSize:12, fontWeight:700 }}>{subQty.toLocaleString()}</td>
+                      <td colSpan={3} />
+                      <td style={{ padding:'7px 14px', textAlign:'right', fontSize:12, fontWeight:700, color:'hsl(220,70%,40%)' }}>{fmt(subValue)}</td>
+                      <td />
+                    </tr>,
+                    ...rows.map(r => <DataRow key={r.id} r={r} />),
+                  ];
+                });
+              })()}
             </tbody>
+            {filtered.length > 0 && (
+              <tfoot>
+                <tr style={{ background:'hsl(220,15%,96%)', fontWeight:700 }}>
+                  <td colSpan={5} style={{ padding:'10px 14px', fontSize:13 }}>Total ({filtered.length} items)</td>
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13 }}>{totalQtyAll.toLocaleString()}</td>
+                  <td colSpan={3} />
+                  <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'inherit', fontSize:13, color:'hsl(220,70%,45%)' }}>{fmt(totalValue)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            )}
           </table>
         </CardContent>
       </Card>
@@ -2820,6 +3351,12 @@ function BOMPage() {
         sku={transferRow?.sku}
         open={!!transferRow}
         onClose={() => setTransferRow(null)}
+      />
+      <PriceHistoryModal
+        item={priceHistoryItem}
+        bills={bills}
+        open={!!priceHistoryItem}
+        onClose={() => setPriceHistoryItem(null)}
       />
     </div>
   );
@@ -3114,7 +3651,7 @@ function SupplierDirectory({ navigate }) {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>Supplier Directory</div>
+          <div style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.5px' }}>Supplier Directory</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>
             {displayed.length} supplier{displayed.length !== 1 ? 's' : ''}
             {viewMode !== 'all' && ` · ${enriched.filter(e => e.s.archived === true).length} archived`}
@@ -3237,9 +3774,11 @@ function SupplierDirectory({ navigate }) {
 
 // ── Ledger Page ────────────────────────────────────────────────────────────────
 function LedgerPage() {
-  const { accounts, journal, finishedGoods, parts, reverseEntry, postSalesSummary, addAccount } = useData();
-  const [tab, setTab] = useState('journal');  // journal | coa | trial | sales
+  const { accounts, journal, reverseEntry, addAccount } = useData();
+  const [tab, setTab] = useState('journal');  // journal | coa | trial
   const [jeFilter, setJeFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo,   setDateTo]   = useState('');
 
   // Compute account balances from journal
   const balances = {};
@@ -3257,39 +3796,89 @@ function LedgerPage() {
   const totalCredits = journal.reduce((s, je) => s + je.lines.reduce((ss, l) => ss + l.credit, 0), 0);
   const balanced = Math.abs(totalDebits - totalCredits) < 0.01;
 
-  const sourceLabel = { po:'Purchase Order', fgo:'FG Order', sales:'Sales Summary', reversal:'Reversal', manual:'Manual' };
-  const sourceColor = { po:'badge-primary', fgo:'badge-green', sales:'badge-yellow', reversal:'badge-red', manual:'badge-muted' };
+  const sourceLabel = { po:'Purchase Order', bill:'Supplier Bill', wo:'Work Order', reversal:'Reversal', manual:'Manual' };
+  const sourceColor = { po:'badge-primary', bill:'badge-green', wo:'badge-yellow', reversal:'badge-red', manual:'badge-muted' };
 
-  const typeOrder = ['asset','liability','equity','revenue','cogs'];
-  const typeLabel = { asset:'Assets', liability:'Liabilities', equity:'Equity', revenue:'Revenue', cogs:'Cost of Goods Sold' };
+  const typeOrder = ['asset','liability','expense'];
+  const typeLabel = { asset:'Assets', liability:'Liabilities', expense:'Expense Tracking' };
 
   const q = jeFilter.toLowerCase();
-  const filteredJournal = q
-    ? journal.filter(je => je.memo.toLowerCase().includes(q) || je.date.includes(q) || (je.source||'').includes(q))
-    : journal;
+  const filteredJournal = journal.filter(je => {
+    if (dateFrom && je.date < dateFrom) return false;
+    if (dateTo   && je.date > dateTo)   return false;
+    if (q && !je.memo.toLowerCase().includes(q) && !je.date.includes(q) && !(je.source||'').includes(q)) return false;
+    return true;
+  });
 
-  // Sales summary dialog state
-  const [salesOpen, setSalesOpen] = useState(false);
-  const [saleDate, setSaleDate] = useState('');
-  const [saleMemo, setSaleMemo] = useState('');
-  const [saleRevenue, setSaleRevenue] = useState('');
-  const [saleUnits, setSaleUnits] = useState('');
-  const [saleSku, setSaleSku] = useState(finishedGoods[0]?.sku || '');
-
-  const computedCOGS = () => {
-    const fg = finishedGoods.find(f => f.sku === saleSku);
-    if (!fg || !saleUnits) return 0;
-    return parseFloat(saleUnits) * fg.bom.reduce((s, b) => {
-      const p = parts.find(pt => pt.id === b.partId);
-      return s + (p ? (p.unitCost + p.freightCost) * b.qty : 0);
-    }, 0);
+  const setPreset = preset => {
+    const now = new Date('2026-04-01');
+    const y = now.getFullYear(), m = now.getMonth();
+    if (preset === 'this-month') {
+      setDateFrom(`${y}-${String(m+1).padStart(2,'0')}-01`);
+      setDateTo(`${y}-${String(m+1).padStart(2,'0')}-${String(new Date(y,m+1,0).getDate()).padStart(2,'0')}`);
+    } else if (preset === 'last-month') {
+      const lm = m === 0 ? 12 : m, ly = m === 0 ? y-1 : y;
+      setDateFrom(`${ly}-${String(lm).padStart(2,'0')}-01`);
+      setDateTo(`${ly}-${String(lm).padStart(2,'0')}-${String(new Date(ly,lm,0).getDate()).padStart(2,'0')}`);
+    } else if (preset === 'ytd') {
+      setDateFrom(`${y}-01-01`);
+      setDateTo(`${y}-${String(m+1).padStart(2,'0')}-${String(new Date(y,m+1,0).getDate()).padStart(2,'0')}`);
+    } else if (preset === 'all') {
+      setDateFrom(''); setDateTo('');
+    }
   };
 
-  const submitSales = () => {
-    if (!saleDate || !saleRevenue || !saleUnits) return;
-    postSalesSummary({ date: saleDate, memo: saleMemo || `Sales Summary — ${saleUnits} units ${saleSku}`, revenue: parseFloat(saleRevenue), cogs: computedCOGS(), units: parseInt(saleUnits) });
-    toast.success('Sales summary posted to journal');
-    setSalesOpen(false); setSaleDate(''); setSaleMemo(''); setSaleRevenue(''); setSaleUnits('');
+  const [showExport, setShowExport] = useState(false);
+
+  const exportCSV = () => {
+    const rows = [['Date','Memo','Source','Account #','Account Name','Debit','Credit']];
+    [...filteredJournal].reverse().forEach(je => {
+      je.lines.forEach(line => {
+        const acct = accounts.find(a => a.id === line.accountId);
+        rows.push([je.date, je.memo, sourceLabel[je.source]||je.source, acct?.number||'', acct?.name||line.accountId,
+          line.debit  > 0 ? line.debit.toFixed(2)  : '',
+          line.credit > 0 ? line.credit.toFixed(2) : '']);
+      });
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob([csv], { type:'text/csv' })),
+      download: `general-ledger${dateFrom||dateTo ? `_${dateFrom||'start'}_to_${dateTo||'end'}` : ''}.csv`,
+    });
+    a.click(); URL.revokeObjectURL(a.href); setShowExport(false);
+  };
+
+  const exportPDF = () => {
+    const dateStr = dateFrom && dateTo ? `${dateFrom} to ${dateTo}` : dateFrom ? `From ${dateFrom}` : dateTo ? `To ${dateTo}` : 'All Dates';
+    const rows = [...filteredJournal].reverse().map(je =>
+      je.lines.map((line, li) => {
+        const acct = accounts.find(a => a.id === line.accountId);
+        return `<tr>
+          <td style="color:#888;white-space:nowrap">${li===0 ? je.date : ''}</td>
+          <td>${li===0 ? je.memo : ''}</td>
+          <td>${li===0 ? (sourceLabel[je.source]||je.source) : ''}</td>
+          <td><span style="font-family:monospace;color:#888;font-size:10px">${acct?.number||''}</span>&nbsp;${acct?.name||line.accountId}</td>
+          <td style="text-align:right">${line.debit  > 0 ? '$'+line.debit.toFixed(2)  : ''}</td>
+          <td style="text-align:right">${line.credit > 0 ? '$'+line.credit.toFixed(2) : ''}</td>
+        </tr>`;
+      }).join('')
+    ).join('');
+    const w = window.open('','_blank');
+    w.document.write(`<!DOCTYPE html><html><head><title>General Ledger</title><style>
+      body{font-family:system-ui,sans-serif;font-size:11px;color:#111;margin:32px}
+      h1{font-size:18px;margin:0 0 4px}
+      .sub{color:#666;font-size:11px;margin-bottom:20px}
+      table{width:100%;border-collapse:collapse}
+      th{background:#f0f2f5;text-align:left;padding:6px 8px;font-size:10px;font-weight:600;border-bottom:2px solid #ccd}
+      td{padding:5px 8px;border-bottom:1px solid #eee;vertical-align:middle}
+    </style></head><body>
+      <h1>General Ledger</h1>
+      <div class="sub">${dateStr} &middot; ${filteredJournal.length} entries</div>
+      <table><thead><tr><th>Date</th><th>Memo</th><th>Source</th><th>Account</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <script>window.onload=()=>window.print()<\/script>
+    </body></html>`);
+    w.document.close(); setShowExport(false);
   };
 
   // Add account dialog state
@@ -3312,7 +3901,7 @@ function LedgerPage() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>General Ledger</div>
+          <div style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.5px' }}>General Ledger</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4, display:'flex', alignItems:'center', gap:8 }}>
             {balanced
               ? <span style={{ color:'hsl(160,60%,35%)', fontWeight:600 }}>✓ Balanced — debits equal credits</span>
@@ -3322,7 +3911,6 @@ function LedgerPage() {
           </div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
-          <Btn size="sm" variant="ghost" onClick={() => setSalesOpen(true)}><Icons.Dollar /> Record Sales</Btn>
           <Btn size="sm" variant="ghost" onClick={() => setAcctOpen(true)}><Icons.Plus /> Add Account</Btn>
         </div>
       </div>
@@ -3337,6 +3925,68 @@ function LedgerPage() {
       {/* ── Journal tab ── */}
       {tab === 'journal' && (
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {/* Date range bar */}
+          <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:12, color:'hsl(220,10%,56%)', whiteSpace:'nowrap' }}>From</span>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                style={{ padding:'6px 8px', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:6, background:'white', fontFamily:'inherit', outline:'none', color:'hsl(220,25%,10%)' }} />
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:12, color:'hsl(220,10%,56%)', whiteSpace:'nowrap' }}>To</span>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                style={{ padding:'6px 8px', fontSize:12, border:'1px solid hsl(220,15%,85%)', borderRadius:6, background:'white', fontFamily:'inherit', outline:'none', color:'hsl(220,25%,10%)' }} />
+            </div>
+            <div style={{ display:'flex', gap:4 }}>
+              {[['this-month','This Month'],['last-month','Last Month'],['ytd','YTD'],['all','All']].map(([p,l]) => {
+                const active = p === 'all' ? (!dateFrom && !dateTo) : false;
+                return (
+                  <button key={p} onClick={() => setPreset(p)}
+                    style={{ padding:'5px 10px', fontSize:11, fontWeight:600, border:'1px solid hsl(220,15%,85%)', borderRadius:5, cursor:'pointer', fontFamily:'inherit',
+                      background: active ? 'hsl(220,70%,50%)' : 'white',
+                      color: active ? 'white' : 'hsl(220,25%,30%)' }}>
+                    {l}
+                  </button>
+                );
+              })}
+            </div>
+            {(dateFrom || dateTo) && (
+              <span style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>
+                {filteredJournal.length} of {journal.length} entries
+              </span>
+            )}
+
+            {/* Export dropdown */}
+            <div style={{ position:'relative', marginLeft:'auto' }}>
+              <button onClick={() => setShowExport(v => !v)}
+                style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 11px', fontSize:12, fontWeight:600,
+                  border:'1px solid hsl(220,15%,82%)', borderRadius:6, background:'white', cursor:'pointer', fontFamily:'inherit',
+                  color:'hsl(220,25%,25%)' }}>
+                ↓ Export <span style={{ fontSize:10, marginLeft:1 }}>▾</span>
+              </button>
+              {showExport && <>
+                <div onClick={() => setShowExport(false)} style={{ position:'fixed', inset:0, zIndex:99 }} />
+                <div style={{ position:'absolute', right:0, top:'calc(100% + 4px)', background:'white', border:'1px solid hsl(220,15%,85%)',
+                  borderRadius:8, boxShadow:'0 4px 16px rgba(0,0,0,0.12)', zIndex:100, minWidth:140, overflow:'hidden' }}>
+                  <button onClick={exportCSV}
+                    style={{ display:'block', width:'100%', padding:'9px 14px', fontSize:12, fontWeight:500, textAlign:'left',
+                      background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', color:'hsl(220,25%,15%)' }}
+                    onMouseEnter={e => e.currentTarget.style.background='hsl(220,15%,96%)'}
+                    onMouseLeave={e => e.currentTarget.style.background='none'}>
+                    ⬇ Download CSV
+                  </button>
+                  <button onClick={exportPDF}
+                    style={{ display:'block', width:'100%', padding:'9px 14px', fontSize:12, fontWeight:500, textAlign:'left',
+                      background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', color:'hsl(220,25%,15%)' }}
+                    onMouseEnter={e => e.currentTarget.style.background='hsl(220,15%,96%)'}
+                    onMouseLeave={e => e.currentTarget.style.background='none'}>
+                    🖨 Print / Save PDF
+                  </button>
+                </div>
+              </>}
+            </div>
+          </div>
+          {/* Text search */}
           <div style={{ position:'relative' }}>
             <div style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}><Icons.Search size={14} color="hsl(220,10%,56%)" /></div>
             <input value={jeFilter} onChange={e=>setJeFilter(e.target.value)} placeholder="Filter by memo, date, source…"
@@ -3513,36 +4163,6 @@ function LedgerPage() {
         </div>
       )}
 
-      {/* ── Sales Summary Dialog ── */}
-      <Modal title="Record Sales Summary" open={salesOpen} onClose={() => setSalesOpen(false)}>
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-          <div style={{ background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:8, padding:'10px 14px', fontSize:13, color:'hsl(220,70%,40%)' }}>
-            Posts a single journal entry: Cash DR / Revenue CR + COGS DR / FG Inventory CR
-          </div>
-          <Field label="Period / Date"><Input type="date" value={saleDate} onChange={e=>setSaleDate(e.target.value)} /></Field>
-          <Field label="SKU">
-            <Select value={saleSku} onChange={setSaleSku}>
-              {finishedGoods.map(fg => <option key={fg.id} value={fg.sku}>{fg.name} — {fg.sku}</option>)}
-            </Select>
-          </Field>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <Field label="Units Sold"><Input type="number" min="1" value={saleUnits} onChange={e=>setSaleUnits(e.target.value)} placeholder="0" /></Field>
-            <Field label="Gross Revenue"><Input type="number" step="0.01" value={saleRevenue} onChange={e=>setSaleRevenue(e.target.value)} placeholder="0.00" /></Field>
-          </div>
-          {saleUnits && (
-            <div style={{ background:'hsl(220,15%,96%)', borderRadius:8, padding:'10px 14px', fontSize:13 }}>
-              Auto-computed COGS: <strong>{fmt(computedCOGS())}</strong>
-              <span style={{ color:'hsl(220,10%,56%)', marginLeft:6, fontSize:12 }}>(from BOM × units)</span>
-            </div>
-          )}
-          <Field label="Memo (optional)"><Input value={saleMemo} onChange={e=>setSaleMemo(e.target.value)} placeholder={`Sales Summary — ${saleUnits||'N'} units ${saleSku}`} /></Field>
-          <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-            <Btn variant="ghost" onClick={() => setSalesOpen(false)}>Cancel</Btn>
-            <Btn onClick={submitSales} disabled={!saleDate || !saleRevenue || !saleUnits}>Post Entry</Btn>
-          </div>
-        </div>
-      </Modal>
-
       {/* ── Add Account Dialog ── */}
       <Modal title="Add Account" open={acctOpen} onClose={() => setAcctOpen(false)}>
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -3559,13 +4179,109 @@ function LedgerPage() {
             <Btn variant="ghost" onClick={() => setAcctOpen(false)}>Cancel</Btn>
             <Btn onClick={() => {
               if (!newAcctNum || !newAcctName) return;
-              addAccount({ number: newAcctNum, name: newAcctName, type: newAcctType, normal: ['asset','cogs'].includes(newAcctType) ? 'debit' : 'credit' });
+              addAccount({ number: newAcctNum, name: newAcctName, type: newAcctType, normal: newAcctType === 'asset' ? 'debit' : 'credit' });
               toast.success('Account added');
               setAcctOpen(false); setNewAcctNum(''); setNewAcctName(''); setNewAcctType('asset');
             }} disabled={!newAcctNum || !newAcctName}>Add Account</Btn>
           </div>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+// ── Locations Page ─────────────────────────────────────────────────────────────
+function LocationsPage() {
+  const { locations, addLocation, updateLocation, deleteLocation } = useData();
+  const [adding, setAdding] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [form, setForm] = useState({ name:'', type:'Internal', notes:'' });
+
+  const resetForm = () => { setForm({ name:'', type:'Internal', notes:'' }); setAdding(false); setEditId(null); };
+
+  const handleSave = () => {
+    if (!form.name.trim()) return;
+    if (editId) {
+      updateLocation(editId, form);
+    } else {
+      addLocation(form);
+    }
+    resetForm();
+  };
+
+  const startEdit = loc => { setForm({ name: loc.name, type: loc.type, notes: loc.notes || '' }); setEditId(loc.id); setAdding(true); };
+
+  const typeBadge = { '3PL':'badge-primary', 'Internal':'badge-green', 'Amazon':'badge-yellow' };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div>
+          <div style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.5px' }}>Locations</div>
+          <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>{locations.length} location{locations.length !== 1 ? 's' : ''}</div>
+        </div>
+        <Btn onClick={() => { resetForm(); setAdding(true); }}>+ Add Location</Btn>
+      </div>
+
+      {adding && (
+        <Card>
+          <CardHeader><CardTitle>{editId ? 'Edit Location' : 'New Location'}</CardTitle></CardHeader>
+          <CardContent>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 160px', gap:12, marginBottom:12 }}>
+              <Field label="Name">
+                <Input value={form.name} onChange={v => setForm(p => ({ ...p, name:v }))} placeholder="e.g. Amazon FBA" />
+              </Field>
+              <Field label="Type">
+                <Select value={form.type} onChange={v => setForm(p => ({ ...p, type:v }))}>
+                  <option value="Internal">Internal</option>
+                  <option value="3PL">3PL</option>
+                  <option value="Amazon">Amazon</option>
+                  <option value="Other">Other</option>
+                </Select>
+              </Field>
+            </div>
+            <Field label="Notes">
+              <Input value={form.notes} onChange={v => setForm(p => ({ ...p, notes:v }))} placeholder="Optional notes" />
+            </Field>
+            <div style={{ display:'flex', gap:8, marginTop:16 }}>
+              <Btn onClick={handleSave}>{editId ? 'Save Changes' : 'Add Location'}</Btn>
+              <Btn variant="ghost" onClick={resetForm}>Cancel</Btn>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardContent style={{ padding:0 }}>
+          {locations.length === 0 ? (
+            <div style={{ padding:32, textAlign:'center', color:'hsl(220,10%,65%)', fontSize:13 }}>No locations yet</div>
+          ) : (
+            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+              <thead>
+                <tr><TH>Name</TH><TH>Type</TH><TH>Notes</TH><TH></TH></tr>
+              </thead>
+              <tbody>
+                {locations.map(loc => (
+                  <tr key={loc.id} style={{ borderBottom:'1px solid hsl(220,15%,92%)' }}>
+                    <TD><span style={{ fontWeight:500 }}>{loc.name}</span></TD>
+                    <TD><Badge cls={typeBadge[loc.type] || 'badge-muted'}>{loc.type}</Badge></TD>
+                    <TD><span style={{ color:'hsl(220,10%,56%)', fontSize:12 }}>{loc.notes || '—'}</span></TD>
+                    <TD>
+                      <div style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
+                        <Btn variant="ghost" onClick={() => startEdit(loc)}>Edit</Btn>
+                        <button onClick={() => deleteLocation(loc.id)}
+                          style={{ fontSize:11, color:'hsl(0,65%,50%)', background:'none', border:'none', cursor:'pointer', padding:'4px 8px' }}>
+                          Delete
+                        </button>
+                      </div>
+                    </TD>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -3611,7 +4327,7 @@ function ActivityLogPage() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>Activity Log</div>
+          <div style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.5px' }}>Activity Log</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>
             {activityLog.length} events recorded
           </div>
@@ -4058,7 +4774,7 @@ function WorkOrdersPage() {
     <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>Work Orders</div>
+          <div style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.5px' }}>Work Orders</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>Track component → WIP → FG assembly runs · Click to manage</div>
         </div>
         <Btn onClick={() => setCreateOpen(true)}>+ New Work Order</Btn>
@@ -4121,9 +4837,42 @@ function WorkOrdersPage() {
   );
 }
 
+// ── ShipToField ───────────────────────────────────────────────────────────────
+function ShipToField({ value, onChange, options, onAddLocation }) {
+  const [addingNew, setAddingNew] = useState(false);
+  const [newName, setNewName] = useState('');
+  const commit = () => {
+    const n = newName.trim();
+    if (n) { onAddLocation(n); onChange(n); }
+    setAddingNew(false); setNewName('');
+  };
+  if (addingNew) {
+    return (
+      <div style={{ display:'flex', gap:6 }}>
+        <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
+          placeholder="New location name…"
+          onKeyDown={e => { if (e.key==='Enter') commit(); if (e.key==='Escape') { setAddingNew(false); setNewName(''); }}}
+          style={{ flex:1, padding:'7px 10px', fontSize:13, border:'1px solid hsl(220,15%,85%)', borderRadius:6, background:'white', fontFamily:'inherit', outline:'none' }} />
+        <button onClick={commit}
+          style={{ padding:'7px 12px', fontSize:12, fontWeight:600, background:'hsl(220,70%,45%)', color:'white', border:'none', borderRadius:6, cursor:'pointer', fontFamily:'inherit' }}>Add</button>
+        <button onClick={() => { setAddingNew(false); setNewName(''); }}
+          style={{ padding:'7px 10px', fontSize:12, background:'none', border:'1px solid hsl(220,15%,85%)', borderRadius:6, cursor:'pointer', color:'hsl(220,10%,56%)', fontFamily:'inherit' }}>Cancel</button>
+      </div>
+    );
+  }
+  return (
+    <select value={value||''} onChange={e => e.target.value==='__new__' ? setAddingNew(true) : onChange(e.target.value)}
+      style={{ width:'100%', padding:'7px 10px', fontSize:13, border:'1px solid hsl(220,15%,85%)', borderRadius:6, background:'white', fontFamily:'inherit' }}>
+      <option value="">— Select destination —</option>
+      {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+      <option value="__new__">+ Add new location…</option>
+    </select>
+  );
+}
+
 // ── Bills Page ────────────────────────────────────────────────────────────────
 function BillsPage() {
-  const { bills, updateBill, deleteBill, addBill, purchaseOrders, suppliers, getSupplierById, parts, finishedGoods, getPartById, workOrders, addWorkOrder, inventoryRecords, addInventoryRecord, updateInventoryRecord } = useData();
+  const { bills, updateBill, deleteBill, addBill, purchaseOrders, suppliers, getSupplierById, parts, finishedGoods, getPartById, workOrders, addWorkOrder, inventoryRecords, addInventoryRecord, updateInventoryRecord, locations, addLocation } = useData();
 
   // When a bill is saved with shipmentStatus='received', upsert inventory at the given location
   const updateInventoryOnReceived = (lineItems, location) => {
@@ -4217,7 +4966,7 @@ function BillsPage() {
     const paymentStatus = computePayStatus({ ...newBill, amount, amountPaid });
     const shipmentStatus = newBill.shipmentStatus || 'open';
     const receivedLocation = newBill.receivedLocation || '';
-    addBill({ ...newBill, amount, paymentStatus, shipmentStatus, receivedLocation: receivedLocation || undefined });
+    addBill({ ...newBill, amount, paymentStatus, shipmentStatus, receivedLocation: receivedLocation || undefined, shipTo: newBill.shipTo || undefined });
     if (shipmentStatus === 'received' && receivedLocation && lineItems.length > 0)
       updateInventoryOnReceived(lineItems, receivedLocation);
     closeNewBill();
@@ -4226,7 +4975,21 @@ function BillsPage() {
 
   const sortedPOs = [...purchaseOrders].reverse();
   const poPickerPOs = sortedPOs.slice(poPickerPage * PO_PAGE_SIZE, (poPickerPage + 1) * PO_PAGE_SIZE);
+  const locationNames = locations.map(l => l.name);
+  const supplierShipOptions = suppliers.map(s => s.name).filter(n => !locationNames.includes(n));
+  const shipToOptions = [...locationNames, ...supplierShipOptions];
   const poPickerMaxPage = Math.ceil(sortedPOs.length / PO_PAGE_SIZE) - 1;
+
+  const [fPayment,  setFPayment]  = useState('');
+  const [fShipment, setFShipment] = useState('');
+
+  const sortedBills = [...bills].reverse();
+  const displayedBills = sortedBills.filter(b => {
+    if (fPayment  && computePayStatus(b) !== fPayment)       return false;
+    if (fShipment && (b.shipmentStatus||'open') !== fShipment) return false;
+    return true;
+  });
+  const activeFilters = [fPayment, fShipment].filter(Boolean).length;
 
   const openBill = (bill) => { setSelected(bill); setF({...bill, lineItems: bill.lineItems ? [...bill.lineItems.map(l=>({...l}))] : [] }); };
   const closeBill = () => { setSelected(null); setF({}); };
@@ -4259,6 +5022,7 @@ function BillsPage() {
       memo: f.memo,
       lineItems: lineItems.length > 0 ? lineItems : undefined,
       amount,
+      shipTo: f.shipTo ?? selected.shipTo ?? undefined,
     });
     toast.success('Bill updated');
     closeBill();
@@ -4290,7 +5054,7 @@ function BillsPage() {
     <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:700 }}>Supplier Bills</div>
+          <div style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.5px' }}>Supplier Bills</div>
           <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>Create bills manually from any PO · Click to edit and mark paid</div>
         </div>
         <Btn onClick={openNewBill}>+ New Supplier Bill</Btn>
@@ -4302,6 +5066,35 @@ function BillsPage() {
         <StatCard title="Paid" value={fmt(totalPaid)} icon={Icons.Dollar} variant="success" />
         <StatCard title="Total Bills" value={`${bills.length}`} icon={Icons.Clipboard} />
       </div>
+
+      {bills.length > 0 && (
+        <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+          <select value={fPayment} onChange={e => setFPayment(e.target.value)}
+            style={{ padding:'6px 10px', borderRadius:8, border:'1px solid hsl(220,15%,88%)', fontSize:13, background:'white', color:'hsl(220,10%,30%)', cursor:'pointer' }}>
+            <option value="">All Payment Statuses</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="deposit-paid">Deposit Paid</option>
+            <option value="paid">Paid</option>
+            <option value="void">Void</option>
+          </select>
+          <select value={fShipment} onChange={e => setFShipment(e.target.value)}
+            style={{ padding:'6px 10px', borderRadius:8, border:'1px solid hsl(220,15%,88%)', fontSize:13, background:'white', color:'hsl(220,10%,30%)', cursor:'pointer' }}>
+            <option value="">All Shipment Statuses</option>
+            <option value="open">Open</option>
+            <option value="shipped">Shipped</option>
+            <option value="received">Received</option>
+          </select>
+          {activeFilters > 0 && (
+            <button onClick={() => { setFPayment(''); setFShipment(''); }}
+              style={{ padding:'6px 12px', borderRadius:8, border:'1px solid hsl(220,15%,88%)', fontSize:13, background:'white', color:'hsl(220,10%,40%)', cursor:'pointer' }}>
+              ✕ Clear {activeFilters} filter{activeFilters > 1 ? 's' : ''}
+            </button>
+          )}
+          {activeFilters > 0 && (
+            <span style={{ fontSize:13, color:'hsl(220,10%,56%)' }}>{displayedBills.length} of {bills.length} bills</span>
+          )}
+        </div>
+      )}
 
       <Card>
         <CardContent style={{ padding:0 }}>
@@ -4319,7 +5112,9 @@ function BillsPage() {
                 </tr>
               </thead>
               <tbody>
-                {[...bills].reverse().map((bill, i) => {
+                {displayedBills.length === 0 ? (
+                  <tr><td colSpan={11} style={{ padding:'40px 20px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:13 }}>No bills match your filters.</td></tr>
+                ) : displayedBills.map((bill, i) => {
                   const sup = getSupplierById(bill.supplierId);
                   const balance = bill.amount - (bill.amountPaid||0);
                   return (
@@ -4377,6 +5172,9 @@ function BillsPage() {
               <div>
                 <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Supplier</div>
                 <div style={{ fontSize:13, fontWeight:600 }}>{supplier?.name || '—'}</div>
+                {(f.shipTo ?? selected.shipTo) && (
+                  <div style={{ fontSize:11, color:'hsl(220,10%,56%)', marginTop:3 }}>Ship to: <span style={{ color:'hsl(220,25%,10%)', fontWeight:500 }}>{f.shipTo ?? selected.shipTo}</span></div>
+                )}
               </div>
               <div>
                 <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Created</div>
@@ -4493,6 +5291,14 @@ function BillsPage() {
                 </Field>
               )}
             </div>
+            <Field label="Ship to">
+              <ShipToField
+                value={f.shipTo ?? selected?.shipTo ?? ''}
+                onChange={v => setF(p => ({...p, shipTo: v}))}
+                options={shipToOptions}
+                onAddLocation={name => addLocation({ name, type:'Internal', notes:'' })}
+              />
+            </Field>
             <Field label="Memo"><Input {...fld('memo')} /></Field>
 
             {/* Invoice attachment */}
@@ -4728,6 +5534,14 @@ function BillsPage() {
                   </Field>
                 )}
               </div>
+              <Field label="Ship to">
+                <ShipToField
+                  value={newBill?.shipTo || ''}
+                  onChange={v => setNewBill(p => ({...p, shipTo: v}))}
+                  options={shipToOptions}
+                  onAddLocation={name => addLocation({ name, type:'Internal', notes:'' })}
+                />
+              </Field>
               <Field label="Memo"><Input {...newBillFld('memo')} /></Field>
 
               <div style={{ display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid hsl(220,15%,90%)', paddingTop:16 }}>
@@ -4922,13 +5736,260 @@ function GlobalSearch({ setPage, onResult }) {
   );
 }
 
+// ── In Transit Page ───────────────────────────────────────────────────────────
+function InTransitPage() {
+  const { bills, updateBill, purchaseOrders, suppliers, getSupplierById, parts, finishedGoods,
+          inventoryRecords, addInventoryRecord, updateInventoryRecord, locations, addLocation } = useData();
+  const fmt = n => `$${(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+  const activeBills = bills.filter(b => b.shipmentStatus !== 'received');
+  const countOpen = activeBills.filter(b => (b.shipmentStatus||'open') === 'open').length;
+  const countInTransit = activeBills.filter(b => b.shipmentStatus === 'in-transit').length;
+  const totalValue = activeBills.reduce((s,b) => s + (b.amount||0), 0);
+
+  const locationNames = locations.map(l => l.name);
+  const supplierShipOptions = suppliers.map(s => s.name).filter(n => !locationNames.includes(n));
+  const shipToOptions = [...locationNames, ...supplierShipOptions];
+
+  const [expandedIds, setExpandedIds] = useState(new Set());
+  const toggleExpand = id => setExpandedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const [selected, setSelected] = useState(null);
+  const [f, setF] = useState({});
+  const openBill = b => { setSelected(b); setF({ shipmentStatus: b.shipmentStatus||'open', shipTo: b.shipTo||'', receivedLocation: b.receivedLocation||'' }); };
+  const close = () => { setSelected(null); setF({}); };
+
+  const [selectedPO, setSelectedPO] = useState(null);
+  const openPO = (poId) => { const po = purchaseOrders.find(p => p.id === poId); if (po) setSelectedPO(po); };
+
+  const applyInventory = (lineItems, location) => {
+    (lineItems||[]).forEach(item => {
+      const sku = (item.sku||'').trim();
+      if (!sku) return;
+      const matchPart = parts.find(p => p.sku === sku);
+      const matchFG   = !matchPart && finishedGoods.find(fg => fg.sku === sku);
+      const entityId  = matchPart?.id || matchFG?.id;
+      if (!entityId) return;
+      const qty = parseFloat(item.qty)||0;
+      const existing = matchPart
+        ? inventoryRecords.find(r => r.partId===entityId && r.location===location)
+        : inventoryRecords.find(r => r.fgId===entityId && r.location===location);
+      if (existing) updateInventoryRecord(existing.id, { qty:(existing.qty||0)+qty });
+      else if (matchPart) addInventoryRecord({ partId:entityId, location, qty, paidFor:true, dateReceived:today() });
+      else addInventoryRecord({ fgId:entityId, partId:null, location, qty, paidFor:true, dateReceived:today() });
+    });
+  };
+
+  const save = () => {
+    const wasReceived = selected.shipmentStatus === 'received';
+    const nowReceived = f.shipmentStatus === 'received';
+    if (nowReceived && !wasReceived && f.receivedLocation) {
+      applyInventory(selected.lineItems, f.receivedLocation);
+    }
+    updateBill(selected.id, {
+      shipmentStatus: f.shipmentStatus,
+      shipTo: f.shipTo || undefined,
+      receivedLocation: f.receivedLocation || undefined,
+    });
+    toast.success('Shipment updated');
+    close();
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+      <div>
+        <div style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.5px' }}>In Transit</div>
+        <div style={{ fontSize:13, color:'hsl(220,10%,56%)', marginTop:4 }}>Billed shipments not yet received · Click a row to view line items · Update to change status</div>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+        <StatCard title="Open / Awaiting Shipment" value={String(countOpen)} icon={Icons.Clipboard} />
+        <StatCard title="In Transit" value={String(countInTransit)} icon={Icons.Truck} variant="info" />
+        <StatCard title="Total Outstanding Value" value={fmt(totalValue)} icon={Icons.Dollar} variant="warning" />
+      </div>
+
+      <Card>
+        <CardContent style={{ padding:0 }}>
+          {activeBills.length === 0 ? (
+            <div style={{ padding:'60px 20px', textAlign:'center', color:'hsl(220,10%,56%)' }}>
+              <div style={{ fontSize:32, marginBottom:12 }}>🚢</div>
+              <div style={{ fontSize:15, fontWeight:600, marginBottom:6 }}>All shipments received</div>
+              <div style={{ fontSize:13 }}>No outstanding shipments at this time.</div>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr style={{ background:'hsl(220,15%,96%)' }}>
+                  <th style={{ width:32 }} />
+                  <TH>Bill #</TH><TH>PO #</TH><TH>Supplier</TH><TH>Ship to</TH><TH>Status</TH><TH>Payment</TH><TH right>Amount</TH><TH>Due</TH><TH />
+                </tr>
+              </thead>
+              <tbody>
+                {[...activeBills].sort((a,b) => {
+                  const order = {'in-transit':0,'open':1};
+                  return (order[a.shipmentStatus||'open']??1) - (order[b.shipmentStatus||'open']??1);
+                }).map(bill => {
+                  const sup = getSupplierById(bill.supplierId);
+                  const billIdx = bills.findIndex(b => b.id === bill.id);
+                  const billNum = `BILL-${String(bills.length - billIdx).padStart(3,'0')}`;
+                  const expanded = expandedIds.has(bill.id);
+                  const lineItems = bill.lineItems || [];
+                  const lineTotal = lineItems.reduce((s,l) => s+(parseFloat(l.qty)||0)*(parseFloat(l.unitPrice)||0), 0);
+                  return (
+                    <React.Fragment key={bill.id}>
+                      <tr style={{ borderBottom: expanded ? 'none' : undefined, verticalAlign:'middle' }}>
+                        <td style={{ padding:'10px 0 10px 14px', textAlign:'center', color:'hsl(220,10%,56%)', fontSize:22, userSelect:'none', cursor:'pointer', width:36, lineHeight:1 }}
+                          onClick={() => toggleExpand(bill.id)}>
+                          {expanded ? '▾' : '▸'}
+                        </td>
+                        <TD>
+                          <span className="mono" onClick={() => openBill(bill)}
+                            style={{ fontSize:12, fontWeight:600, color:'hsl(220,70%,45%)', cursor:'pointer' }}
+                            onMouseEnter={e => e.currentTarget.style.textDecoration='underline'}
+                            onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>
+                            {billNum}
+                          </span>
+                        </TD>
+                        <TD>
+                          {bill.poNumber
+                            ? <span className="mono" onClick={() => openPO(bill.poId)}
+                                style={{ fontSize:12, color:'hsl(220,70%,45%)', cursor:'pointer', fontWeight:500 }}
+                                onMouseEnter={e => e.currentTarget.style.textDecoration='underline'}
+                                onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>
+                                {bill.poNumber}
+                              </span>
+                            : <span className="mono" style={{ fontSize:12, color:'hsl(220,10%,56%)' }}>—</span>
+                          }
+                        </TD>
+                        <TD>{sup?.shortName || sup?.name || '—'}</TD>
+                        <TD>{bill.shipTo || <span style={{ color:'hsl(220,15%,70%)' }}>—</span>}</TD>
+                        <TD><Badge cls={billShipCls[bill.shipmentStatus||'open']}>{billShipLabel[bill.shipmentStatus||'open']}</Badge></TD>
+                        <TD><Badge cls={billPaymentCls[computePayStatus(bill)]||'badge-muted'}>{billPaymentLabel[computePayStatus(bill)]}</Badge></TD>
+                        <TD right mono bold>{fmt(bill.amount)}</TD>
+                        <TD muted>{bill.dueDate||'—'}</TD>
+                        <td style={{ padding:'10px 14px' }}>
+                          <button onClick={() => openBill(bill)}
+                            style={{ fontSize:11, fontWeight:600, color:'hsl(220,70%,45%)', background:'hsl(220,70%,96%)', border:'1px solid hsl(220,70%,85%)', borderRadius:5, padding:'4px 10px', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                            Update
+                          </button>
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr>
+                          <td />
+                          <td colSpan={9} style={{ padding:'0 14px 14px 14px', background:'hsl(220,15%,98%)' }}>
+                            {lineItems.length === 0 ? (
+                              <div style={{ fontSize:12, color:'hsl(220,10%,65%)', padding:'10px 0', fontStyle:'italic' }}>No line items on this bill.</div>
+                            ) : (
+                              <table style={{ width:'100%', borderCollapse:'collapse', border:'1px solid hsl(220,15%,88%)', borderRadius:6, overflow:'hidden' }}>
+                                <thead>
+                                  <tr style={{ background:'hsl(220,15%,94%)' }}>
+                                    <th style={{ padding:'6px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'left' }}>Description</th>
+                                    <th style={{ padding:'6px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'left' }}>SKU</th>
+                                    <th style={{ padding:'6px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'right' }}>Qty</th>
+                                    <th style={{ padding:'6px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'right' }}>Unit Price</th>
+                                    <th style={{ padding:'6px 12px', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, color:'hsl(220,10%,46%)', textAlign:'right' }}>Total</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {lineItems.map((l, i) => (
+                                    <tr key={i} style={{ borderTop:'1px solid hsl(220,15%,91%)' }}>
+                                      <td style={{ padding:'7px 12px', fontSize:12 }}>{l.description||'—'}</td>
+                                      <td style={{ padding:'7px 12px', fontSize:11, fontFamily:'JetBrains Mono,monospace', color:'hsl(220,70%,45%)' }}>{l.sku||'—'}</td>
+                                      <td style={{ padding:'7px 12px', fontSize:12, textAlign:'right' }}>{(+l.qty||0).toLocaleString()}</td>
+                                      <td style={{ padding:'7px 12px', fontSize:12, textAlign:'right' }}>{fmt(l.unitPrice||0)}</td>
+                                      <td style={{ padding:'7px 12px', fontSize:12, fontWeight:600, textAlign:'right' }}>{fmt((parseFloat(l.qty)||0)*(parseFloat(l.unitPrice)||0))}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                                <tfoot>
+                                  <tr style={{ borderTop:'2px solid hsl(220,15%,85%)', background:'hsl(220,15%,96%)' }}>
+                                    <td colSpan={4} style={{ padding:'7px 12px', fontSize:12, fontWeight:600, textAlign:'right' }}>Total</td>
+                                    <td style={{ padding:'7px 12px', fontSize:13, fontWeight:700, textAlign:'right' }}>{fmt(lineTotal)}</td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Modal title={`Update Shipment`} open={!!selected} onClose={close}
+        headerAction={selected && <span className="mono" style={{ fontSize:13, fontWeight:700, color:'hsl(220,70%,45%)' }}>{selected.poNumber}</span>}>
+        {selected && (
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            <div style={{ display:'flex', gap:16, background:'hsl(220,15%,97%)', borderRadius:8, padding:'12px 16px' }}>
+              <div>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Supplier</div>
+                <div style={{ fontSize:13, fontWeight:600 }}>{getSupplierById(selected.supplierId)?.name || '—'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Amount</div>
+                <div style={{ fontSize:13, fontWeight:600 }}>{fmt(selected.amount)}</div>
+              </div>
+              <div style={{ marginLeft:'auto' }}>
+                <div style={{ fontSize:11, color:'hsl(220,10%,56%)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Current Status</div>
+                <Badge cls={billShipCls[selected.shipmentStatus||'open']}>{billShipLabel[selected.shipmentStatus||'open']}</Badge>
+              </div>
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <Field label="Shipment Status">
+                <Select value={f.shipmentStatus||'open'} onChange={v => setF(p=>({...p,shipmentStatus:v}))}>
+                  <option value="open">Open</option>
+                  <option value="in-transit">In Transit</option>
+                  <option value="received">Received</option>
+                </Select>
+              </Field>
+              <Field label="Ship to">
+                <ShipToField
+                  value={f.shipTo||''}
+                  onChange={v => setF(p=>({...p,shipTo:v}))}
+                  options={shipToOptions}
+                  onAddLocation={name => addLocation({ name, type:'Internal', notes:'' })}
+                />
+              </Field>
+            </div>
+
+            {f.shipmentStatus === 'received' && (
+              <Field label="Received Location">
+                <Select value={f.receivedLocation||''} onChange={v => setF(p=>({...p,receivedLocation:v}))}>
+                  <option value="">— Select location —</option>
+                  {locationNames.map(n => <option key={n} value={n}>{n}</option>)}
+                </Select>
+              </Field>
+            )}
+
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid hsl(220,15%,90%)', paddingTop:16 }}>
+              <Btn variant="ghost" onClick={close}>Cancel</Btn>
+              <Btn onClick={save}>Save Changes</Btn>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <PODetail po={selectedPO} open={!!selectedPO} onClose={() => setSelectedPO(null)} />
+    </div>
+  );
+}
+
 const navItems = [
   { id:'dashboard',   label:'Dashboard',       Icon: Icons.Dashboard },
   { id:'pos',         label:'Purchase Orders', Icon: Icons.Clipboard },
-  { id:'bills',       label:'Supplier Bills',    Icon: Icons.Dollar    },
+  { id:'bills',       label:'Supplier Bills',  Icon: Icons.Dollar    },
+  { id:'intransit',   label:'In Transit',      Icon: Icons.Truck     },
   { id:'workorders',  label:'Work Orders',     Icon: Icons.Layers    },
   { id:'bom',         label:'Inventory',       Icon: Icons.Package   },
   { id:'suppliers',   label:'Suppliers',       Icon: Icons.Users     },
+  { id:'locations',   label:'Locations',       Icon: Icons.MapPin    },
   { id:'ledger',      label:'General Ledger',  Icon: Icons.File      },
   { id:'activity',    label:'Activity Log',    Icon: Icons.Clipboard },
 ];
@@ -4959,8 +6020,10 @@ export default function App() {
     : page === 'pos'         ? <PurchaseOrdersPage supplierFilter={supplierFilter} clearFilter={() => setSupplierFilter(null)} />
     : page === 'workorders'  ? <WorkOrdersPage />
     : page === 'bills'       ? <BillsPage />
+    : page === 'intransit'   ? <InTransitPage />
     : page === 'bom'         ? <BOMPage />
     : page === 'suppliers'   ? <SupplierDirectory navigate={navigate} />
+    : page === 'locations'   ? <LocationsPage />
     : page === 'ledger'      ? <LedgerPage />
     : page === 'activity'    ? <ActivityLogPage />
     : <Dashboard setPage={setPage} />;
